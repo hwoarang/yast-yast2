@@ -169,24 +169,24 @@ module Firewalld
 
     # True if interface is enabled in zone
     def is_interface_enabled?(zone, interface)
-      do_cmd("--zone=#{zone} --query-interface=#{interface}")
+      do_cmd("--permanent --zone=#{zone} --query-interface=#{interface}")
     end
 
     # True if interface added in zone
     def add_interface_to_zone(zone, interface)
-      do_cmd("--zone=#{zone} --add-interface=#{interface}")
+      do_cmd("--permanent --zone=#{zone} --add-interface=#{interface}")
     end
 
     # True if interface removed from zone
     def remove_interface_from_zone(zone, interface)
-      do_cmd("--zone=#{zone} --remove-interface=#{interface}")
+      do_cmd("--permanent --zone=#{zone} --remove-interface=#{interface}")
     end
 
     ### Services ###
 
     # Return list of firewalld supported services.
     def get_supported_services
-      fwcmd = FWCmd.new("--get-services")
+      fwcmd = FWCmd.new("--permanent --get-services")
       fwcmd.output.split(" ")
     end
 
@@ -225,12 +225,12 @@ module Firewalld
 
     # True if service is enabled in zone. Returns true/false
     def is_service_enabled?(zone, service)
-      do_cmd("--zone=#{zone} --query-service=#{service}")
+      do_cmd("--permanent --zone=#{zone} --query-service=#{service}")
     end
 
     # Return port/protocol pair as defined in the service file
     def get_service_ports(service)
-      fwcmd = FWCmd.new("--permanent --service=#{service} --get-ports")
+      fwcmd = FWCmd.new("--permanent --permanent --service=#{service} --get-ports")
       fwcmd.output.strip
     end
 
@@ -242,59 +242,59 @@ module Firewalld
 
     # True if port is enabled in zone.
     def is_port_enabled?(zone, port)
-      do_cmd("--zone=#{zone} --query-port=#{port}")
+      do_cmd("--permanent --zone=#{zone} --query-port=#{port}")
     end
 
     # True if protocol is enabled in zone.
     def is_protocol_enabled?(zone, protocol)
-     do_cmd("--zone=#{zone} --query-protocol=#{protocol}")
+     do_cmd("--permanent --zone=#{zone} --query-protocol=#{protocol}")
     end
 
     # True to add service to zone.
     def add_service_to_zone(zone, service)
-      do_cmd("--zone=#{zone} --add-service=#{service}")
+      do_cmd("--permanent --zone=#{zone} --add-service=#{service}")
     end
 
     # True to add port to zone.
     def add_port_to_zone(zone, port)
-      do_cmd("--zone=${zone} --add-port=#{port}")
+      do_cmd("--permanent --zone=${zone} --add-port=#{port}")
     end
 
     # True to add port to zone.
     def add_protocol_to_zone(zone, protocol)
-      do_cmd("--zone=${zone} --add-protocol=#{protocol}")
+      do_cmd("--permanent --zone=${zone} --add-protocol=#{protocol}")
     end
 
     # True to remove service from zone.
     def remove_service_from_zone(zone, service)
-      do_cmd("--zone=#{zone} --remove-service=#{service}")
+      do_cmd("--permanent --zone=#{zone} --remove-service=#{service}")
     end
 
     # True to remove service from zone.
     def remove_port_from_zone(zone, port)
-      do_cmd("--zone=#{zone} --remove-port=#{port}")
+      do_cmd("--permanent --zone=#{zone} --remove-port=#{port}")
     end
 
     # True to remove service from zone.
     def remove_protocol_from_zone(zone, protocol)
-      do_cmd("--zone=#{zone} --remove-protocol=#{protocol}")
+      do_cmd("--permanent --zone=#{zone} --remove-protocol=#{protocol}")
     end
 
     # True if masquerade is enabled in zone
     def is_masquerade_enabled?(zone)
-      do_cmd("--zone=#{zone} --query-masquerade")
+      do_cmd("--permanent --zone=#{zone} --query-masquerade")
     end
 
     # True to enable masquerade to zone.
     def add_masquerade(zone)
       return true if is_masquerade_enabled?(zone)
-      do_cmd("--zone=#{zone} --add-masquerade")
+      do_cmd("--permanent --zone=#{zone} --add-masquerade")
     end
 
     # True to remove masquerade from zone.
     def remove_masquerade(zone)
       return true if not is_masquerade_enabled?(zone)
-      do_cmd("--zone=#{zone} --remove-masquerade")
+      do_cmd("--permanent --zone=#{zone} --remove-masquerade")
     end
 
     ### Logging ##
