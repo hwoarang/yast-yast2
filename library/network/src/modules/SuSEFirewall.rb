@@ -151,14 +151,53 @@ module Yast
         end
       end
     end
+
+    publish variable: :firewall_service, type: "string", private: true
+    publish variable: :FIREWALL_PACKAGE, type: "const string"
+    publish variable: :SETTINGS, type: "map <string, any>", private: true
+    publish variable: :special_all_interface_zone, type: "string"
+
   end
 
   # ----------------------------------------------------------------------------
   # SuSEFirewalld Class. Trying to provide relevent pieces of SF2 functionality via
   # firewalld.
-  class SuSEFirewalld < Module
+  class SuSEFirewalld < Firewall
+    attr_reader :special_all_interface_zone
+    attr_reader :fwd_api
     def initialize
+      # firewalld API interface.
+      @fwd_api = FirewalldAPI.create
+      # firewalld service
+      @firewall_service = "firewalld"
+      # firewalld package
+      @FIREWALL_PACKAGE = "firewalld"
+      # firewall settings map
+      @SETTINGS = {}
+      # Zone which works with the special_all_interface_string string. In our case,
+      # we don't want to deal with this just yet. FIXME
+      @special_all_interface_zone = ""
     end
+
+    # Function which attempts to convert a sf2_service name to a firewalld
+    # equivalent.
+    def _sf2_to_firewalld_service(service)
+
+      # First, let's strip off 'service:' from service name if present.
+      tmp_service = service.include?("service:") ?
+        service.partition(":")[2] : service
+
+      sf2_to_firewalld_map = {
+        "nfs-client" => "nfs"
+      }
+
+      if sf2_to_firewalld_map.has_key?(tmp_service)
+        sf2_to_firewalld_map[tmp_service]
+      else
+        tmp_service
+      end
+    end
+
   end
 
   # ----------------------------------------------------------------------------
@@ -3873,12 +3912,9 @@ module Yast
       @SETTINGS["FW_BOOT_FULL_INIT"] == "yes"
     end
 
-    publish variable: :FIREWALL_PACKAGE, type: "const string"
     publish variable: :configuration_has_been_read, type: "boolean", private: true
     publish variable: :special_all_interface_string, type: "string"
     publish variable: :max_port_number, type: "integer"
-    publish variable: :special_all_interface_zone, type: "string"
-    publish variable: :SETTINGS, type: "map <string, any>", private: true
     publish variable: :modified, type: "boolean", private: true
     publish variable: :is_running, type: "boolean", private: true
     publish variable: :DEFAULT_SETTINGS, type: "map <string, string>", private: true
@@ -3889,7 +3925,6 @@ module Yast
     publish variable: :supported_protocols, type: "list <string>", private: true
     publish variable: :service_defined_by, type: "list <string>", private: true
     publish variable: :allowed_conflict_services, type: "map <string, list <string>>", private: true
-    publish variable: :firewall_service, type: "string", private: true
     publish variable: :SuSEFirewall_variables, type: "list <string>", private: true
     publish variable: :one_line_per_record, type: "list <string>", private: true
     publish variable: :broadcast_related_module, type: "string", private: true
