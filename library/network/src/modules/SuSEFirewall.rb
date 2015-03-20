@@ -876,6 +876,15 @@ module Yast
       zone_full_name
     end
 
+    # Function returns whether the feature 'any' network interface is supported.
+    # This is a SF2 specific construct. For firewalld, we simply return false.
+    # We may decide to change this in the future.
+    #
+    # @return boolean false
+    def IsAnyNetworkInterfaceSupported
+      false
+    end
+
     publish variable: :firewall_service, type: "string", private: true
     publish variable: :FIREWALL_PACKAGE, type: "const string"
     publish variable: :SETTINGS, type: "map <string, any>", private: true
@@ -903,6 +912,7 @@ module Yast
     publish function: :GetZoneOfInterface, type: "string (string)"
     publish function: :IsInterfaceInZone, type: "boolean (string, string)"
     publish function: :GetZonesOfInterfaces, type: "list <string> (list <string>)"
+    publish function: :IsAnyNetworkInterfaceSupported, type: "boolean ()"
 
   end
 
