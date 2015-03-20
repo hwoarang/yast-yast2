@@ -324,6 +324,63 @@ module Yast
       deep_copy(services_status)
     end
 
+    # Function returns map of supported services all network interfaces.
+    #
+    # @param	list <string> of services
+    # @return	[Hash <String, Hash{String => Boolean} >]
+    #
+    #
+    # **Structure:**
+    #
+    #    	Returns $[service : $[ interface : supported_status ]]
+    #
+    # @example
+    #	GetServicesInZones (["service:irc-server"]) -> $["service:irc-server":$["eth1":true]]
+    #  // No such service "something"
+    #	GetServicesInZones (["something"])) -> $["something":$["eth1":nil]]
+    #  GetServicesInZones (["samba-server"]) -> $["samba-server":$["eth1":false]]
+    def GetServicesInZones(services)
+      services = deep_copy(services)
+      # list of interfaces for each zone
+      interface_in_zone = {}
+
+      Builtins.foreach(GetListOfKnownInterfaces()) do |interface|
+        # zone of interface
+        zone_used = GetZoneOfInterface(interface)
+        # interface can be unassigned
+        next if zone_used.nil? || zone_used == ""
+        Ops.set(
+          interface_in_zone,
+          zone_used,
+          Builtins.add(Ops.get(interface_in_zone, zone_used, []), interface)
+        )
+      end
+
+      # $[ service : $[ network_interface : status ]]
+      services_status = {}
+
+      # for all services requested
+      Builtins.foreach(services) do |service|
+        if self.class == SuSEFirewalld
+          tmp_service = service
+          service = _sf2_to_firewalld_service(service)
+          # We need the service: prefix if it was there before.
+          service = "service:" + service if tmp_service.include?("service:")
+        end
+        Ops.set(services_status, service, {})
+        # for all zones in configuration
+        Builtins.foreach(interface_in_zone) do |zone, interfaces|
+          status = IsServiceSupportedInZone(service, zone)
+          # for all interfaces in zone
+          Builtins.foreach(interfaces) do |interface|
+            Ops.set(services_status, [service, interface], status)
+          end
+        end
+      end
+
+      deep_copy(services_status)
+    end
+
     # Function returns list of maps of known interfaces.
     #
     # **Structure:**
@@ -526,6 +583,7 @@ module Yast
     publish function: :IsServiceSupportedInZone, type: "boolean (string, string)"
     publish function: :GetServices, type: "map <string, map <string, boolean>> (list <string>)"
     publish function: :GetListOfKnownInterfaces, type: "list <string> ()"
+    publish function: :GetServicesInZones, type: "map <string, map <string, boolean>> (list <string>)"
 
   end
 
@@ -2871,57 +2929,6 @@ module Yast
       service_is_supported
     end
 
-    # Function returns map of supported services all network interfaces.
-    #
-    # @param	list <string> of services
-    # @return	[Hash <String, Hash{String => Boolean} >]
-    #
-    #
-    # **Structure:**
-    #
-    #    	Returns $[service : $[ interface : supported_status ]]
-    #
-    # @example
-    #	GetServicesInZones (["service:irc-server"]) -> $["service:irc-server":$["eth1":true]]
-    #  // No such service "something"
-    #	GetServicesInZones (["something"])) -> $["something":$["eth1":nil]]
-    #  GetServicesInZones (["samba-server"]) -> $["samba-server":$["eth1":false]]
-    def GetServicesInZones(services)
-      services = deep_copy(services)
-      # list of interfaces for each zone
-      interface_in_zone = {}
-
-      Builtins.foreach(GetListOfKnownInterfaces()) do |interface|
-        # zone of interface
-        zone_used = GetZoneOfInterface(interface)
-        # interface can be unassigned
-        next if zone_used.nil? || zone_used == ""
-        Ops.set(
-          interface_in_zone,
-          zone_used,
-          Builtins.add(Ops.get(interface_in_zone, zone_used, []), interface)
-        )
-      end
-
-      # $[ service : $[ network_interface : status ]]
-      services_status = {}
-
-      # for all services requested
-      Builtins.foreach(services) do |service|
-        Ops.set(services_status, service, {})
-        # for all zones in configuration
-        Builtins.foreach(interface_in_zone) do |zone, interfaces|
-          status = IsServiceSupportedInZone(service, zone)
-          # for all interfaces in zone
-          Builtins.foreach(interfaces) do |interface|
-            Ops.set(services_status, [service, interface], status)
-          end
-        end
-      end
-
-      deep_copy(services_status)
-    end
-
     # Function sets status for several services in several firewall zones.
     #
     # @param	list <string> service ids
@@ -4418,7 +4425,6 @@ module Yast
     publish function: :AddService, type: "boolean (string, string, string)"
     publish function: :RemoveService, type: "boolean (string, string, string)"
     publish function: :IsServiceDefinedByPackageSupportedInZone, type: "boolean (string, string)", private: true
-    publish function: :GetServicesInZones, type: "map <string, map <string, boolean>> (list <string>)"
     publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :SetServices, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :ReadDefaultConfiguration, type: "void ()", private: true
