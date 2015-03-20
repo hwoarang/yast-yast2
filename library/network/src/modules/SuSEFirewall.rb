@@ -241,6 +241,7 @@ module Yast
     publish variable: :SETTINGS, type: "map <string, any>", private: true
     publish variable: :special_all_interface_zone, type: "string"
     publish function: :GetAllKnownInterfaces, type: "list <map <string, string>> ()"
+    publish function: :GetZoneOfInterface, type: "string (string)"
 
   end
 
@@ -283,6 +284,40 @@ module Yast
       end
     end
 
+    # Function returns the firewall zone of interface, nil if no zone includes
+    # the interface. Firewalld does not allow an interface to be in more than
+    # one zone, so no error detection for this case is needed.
+    #
+    # @param string interface
+    # @return string zone, or nil
+    def GetZoneOfInterface(interface)
+      @fwd_api.get_zone_of_interface(interface)
+    end
+
+    # Function returns name of the zone. Since firewalld zones are move verbose,
+    # only 'dmz' is converted to a fuller name. Please note that as of yet, no
+    # translation is possible.
+    #
+    # @param string short name
+    # @return string zone name
+    #
+    # TODO: Obtain translation, as per:
+    # @example
+    #  LANG=en_US GetZoneFullName ("EXT") -> "External Zone"
+    #  LANG=cs_CZ GetZoneFullName ("EXT") -> "Externí Zóna"
+    def GetZoneFullName(zone)
+      zone_short_to_long = {
+        "dmz" => "demilitarized"
+      }
+
+      if zone_short_to_long.key?(zone)
+        zone_full_name = "#{zone_short_to_long[zone].capitalize} Zone"
+      else
+        zone_full_name = "#{zone.capitalize} Zone"
+      end
+
+      zone_full_name
+    end
   end
 
   # ----------------------------------------------------------------------------
@@ -3997,7 +4032,6 @@ module Yast
     publish function: :Import, type: "void (map <string, any>)"
     publish function: :read_and_import, type: "void (map <string, any>)"
     publish function: :IsInterfaceInZone, type: "boolean (string, string)"
-    publish function: :GetZoneOfInterface, type: "string (string)"
     publish function: :GetZonesOfInterfaces, type: "list <string> (list <string>)"
     publish function: :GetInterfacesInZoneSupportingAnyFeature, type: "list <string> (string)"
     publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
