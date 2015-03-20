@@ -376,6 +376,7 @@ module Yast
     publish function: :ResetModified, type: "void ()"
     publish function: :GetModified, type: "boolean ()"
     publish function: :SetServices, type: "boolean (list <string>, list <string>, boolean)"
+    publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
 
   end
 
@@ -383,6 +384,9 @@ module Yast
   # SuSEFirewalld Class. Trying to provide relevent pieces of SF2 functionality via
   # firewalld.
   class SuSEFirewalld < Firewall
+
+    Yast.import "SuSEFirewallServices"
+
     attr_reader :special_all_interface_zone
     attr_reader :fwd_api
     def initialize
@@ -562,6 +566,75 @@ module Yast
       end
 
       service_status
+    end
+
+    # Function sets status for several services in several firewall zones.
+    #
+    # @param	list <string> service ids
+    # @param	list <string> firewall zones (EXT|INT|DMZ...)
+    # @param	boolean new status of services
+    # @return	[Boolean] if successfull
+    #
+    # @example
+    #	SetServicesForZones (["samba-server", "service:irc-server"], ["DMZ", "EXT"], false);
+    #	SetServicesForZones (["samba-server", "service:irc-server"], ["EXT", "DMZ"], true);
+    #
+    # @see #GetServicesInZones()
+    # @see #GetServices()
+    def SetServicesForZones(services_ids, firewall_zones, new_status)
+      services_ids = deep_copy(services_ids)
+      zones = deep_copy(firewall_zones)
+      # no groups == all groups
+      if zones.empty?
+        zones = GetKnownFirewallZones()
+      end
+
+      # setting for each service
+      services_ids.each do |service|
+        service = _sf2_to_firewalld_service(service)
+        # Service is not supported by firewalld.
+        if not @fwd_api.get_supported_services.include?(service)
+          Builtins.y2error("Undefined service '#{service}'")
+          raise(SuSEFirewalServiceNotFound, "Service with name '#{service}' does not exist")
+        end
+        zones.each do |zone|
+          # Add/remove service to/from zone only if zone is not 'trusted'.
+          # For 'trusted' zone there is no need to explicitly add/remove
+          # services as all connections are by default accepted.
+          next if zone == "trusted"
+
+          # zone must be known one
+          if !IsKnownZone(zone)
+            Builtins.y2error(
+              "Zone '%1' is unknown firewall zone, skipping...",
+              zone
+            )
+            next
+          end
+
+          SetModified()
+
+          if new_status == true # enable
+            Builtins.y2milestone(
+              "Adding '%1' into '%2' zone",
+              service, zone
+            )
+            if not @fwd_api.add_service_to_zone(zone, service)
+              Builtins.y2error("Failed to add service '#{service}' into zone '#{zone}'")
+            end
+          else # disable
+            Builtins.y2milestone(
+              "Removing '%1' from '%2' zone",
+               service, zone
+            )
+            if not @fwd_api.remove_service_from_zone(zone, service)
+              Builtins.y2error("Failed to remove service '#{service}' from zone '#{zone}'")
+            end
+          end
+        end
+      end
+
+      nil
     end
 
   end
@@ -4163,7 +4236,6 @@ module Yast
     publish function: :AddService, type: "boolean (string, string, string)"
     publish function: :RemoveService, type: "boolean (string, string, string)"
     publish function: :IsServiceDefinedByPackageSupportedInZone, type: "boolean (string, string)", private: true
-    publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :ReadDefaultConfiguration, type: "void ()", private: true
     publish function: :ReadCurrentConfiguration, type: "void ()", private: true
     publish variable: :converted_to_services_dbp_file, type: "string", private: true
