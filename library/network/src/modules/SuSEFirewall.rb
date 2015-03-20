@@ -40,6 +40,8 @@ module Yast
   class Firewall < Module
     include Yast::Logger
 
+    Yast.import "NetworkInterfaces"
+
     # Use same hash for package names and services
     @@firewall_backends = {
       :sf2 => "SuSEfirewall2",
@@ -284,6 +286,88 @@ module Yast
       deep_copy(@known_firewall_zones)
     end
 
+    # Function returns list of maps of known interfaces.
+    #
+    # **Structure:**
+    #
+    #     [ $[ "id":"modem0", "name":"Askey 815C", "type":"dialup", "zone":"EXT" ], ... ]
+    #
+    # @return	[Array<Hash{String => String>}]
+    # @return [Array<Hash{String => String>}] of all interfaces
+    def GetAllKnownInterfaces
+      known_interfaces = []
+
+      # All dial-up interfaces
+      dialup_interfaces = NetworkInterfaces.List("dialup")
+      dialup_interfaces = [] if dialup_interfaces.nil?
+
+      # bugzilla #303858 - wrong values from NetworkInterfaces
+      dialup_interfaces = Builtins.filter(dialup_interfaces) do |one_iface|
+        if one_iface.nil? || one_iface == ""
+          Builtins.y2error("Wrong interface definition '%1'", one_iface)
+          next false
+        end
+        true
+      end
+
+      dialup_interfaces = Builtins.filter(dialup_interfaces) do |interface|
+        interface != "" && !Builtins.issubstring(interface, "lo") &&
+          !Builtins.issubstring(interface, "sit")
+      end
+
+      # All non-dial-up interfaces
+      non_dialup_interfaces = NetworkInterfaces.List("")
+      non_dialup_interfaces = [] if non_dialup_interfaces.nil?
+
+      # bugzilla #303858 - wrong values from NetworkInterfaces
+      non_dialup_interfaces = Builtins.filter(non_dialup_interfaces) do |one_iface|
+        if one_iface.nil? || one_iface == ""
+          Builtins.y2error("Wrong interface definition '%1'", one_iface)
+          next false
+        end
+        true
+      end
+
+      non_dialup_interfaces = Builtins.filter(non_dialup_interfaces) do |interface|
+        interface != "" && !Builtins.issubstring(interface, "lo") &&
+          !Builtins.issubstring(interface, "sit") &&
+          !Builtins.contains(dialup_interfaces, interface)
+      end
+
+      Builtins.foreach(dialup_interfaces) do |interface|
+        known_interfaces = Builtins.add(
+          known_interfaces,
+
+          "id"   => interface,
+          "type" => "dialup",
+          # using function to get name
+          "name" => NetworkInterfaces.GetValue(
+            interface,
+            "NAME"
+          ),
+          "zone" => GetZoneOfInterface(interface)
+
+        )
+      end
+
+      Builtins.foreach(non_dialup_interfaces) do |interface|
+        known_interfaces = Builtins.add(
+          known_interfaces,
+
+          "id"   => interface,
+          # using function to get name
+          "name" => NetworkInterfaces.GetValue(
+            interface,
+            "NAME"
+          ),
+          "zone" => GetZoneOfInterface(interface)
+
+        )
+      end
+
+      deep_copy(known_interfaces)
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -357,6 +441,7 @@ module Yast
     publish function: :Write, type: "boolean ()"
     publish function: :Export, type: "map <string, any> ()"
     publish function: :Import, type: "void (map <string, any>)"
+    publish function: :GetAllKnownInterfaces, type: "list <map <string, string>> ()"
 
   end
 
@@ -701,7 +786,7 @@ module Yast
   # ----------------------------------------------------------------------------
   # SuSEFirewall2/SF2 Class. The original, simply created from the Firewall
   # factory class.
-  class SuSEFirewall2 < Module
+  class SuSEFirewall2 < Firewall
     CONFIG_FILE = "/etc/sysconfig/SuSEfirewall2"
 
     include Yast::Logger
@@ -2057,88 +2142,6 @@ module Yast
       end
 
       Builtins.toset(zones)
-    end
-
-    # Function returns list of maps of known interfaces.
-    #
-    # **Structure:**
-    #
-    #     [ $[ "id":"modem0", "name":"Askey 815C", "type":"dialup", "zone":"EXT" ], ... ]
-    #
-    # @return	[Array<Hash{String => String>}]
-    # @return [Array<Hash{String => String>}] of all interfaces
-    def GetAllKnownInterfaces
-      known_interfaces = []
-
-      # All dial-up interfaces
-      dialup_interfaces = NetworkInterfaces.List("dialup")
-      dialup_interfaces = [] if dialup_interfaces.nil?
-
-      # bugzilla #303858 - wrong values from NetworkInterfaces
-      dialup_interfaces = Builtins.filter(dialup_interfaces) do |one_iface|
-        if one_iface.nil? || one_iface == ""
-          Builtins.y2error("Wrong interface definition '%1'", one_iface)
-          next false
-        end
-        true
-      end
-
-      dialup_interfaces = Builtins.filter(dialup_interfaces) do |interface|
-        interface != "" && !Builtins.issubstring(interface, "lo") &&
-          !Builtins.issubstring(interface, "sit")
-      end
-
-      # All non-dial-up interfaces
-      non_dialup_interfaces = NetworkInterfaces.List("")
-      non_dialup_interfaces = [] if non_dialup_interfaces.nil?
-
-      # bugzilla #303858 - wrong values from NetworkInterfaces
-      non_dialup_interfaces = Builtins.filter(non_dialup_interfaces) do |one_iface|
-        if one_iface.nil? || one_iface == ""
-          Builtins.y2error("Wrong interface definition '%1'", one_iface)
-          next false
-        end
-        true
-      end
-
-      non_dialup_interfaces = Builtins.filter(non_dialup_interfaces) do |interface|
-        interface != "" && !Builtins.issubstring(interface, "lo") &&
-          !Builtins.issubstring(interface, "sit") &&
-          !Builtins.contains(dialup_interfaces, interface)
-      end
-
-      Builtins.foreach(dialup_interfaces) do |interface|
-        known_interfaces = Builtins.add(
-          known_interfaces,
-
-          "id"   => interface,
-          "type" => "dialup",
-          # using function to get name
-          "name" => NetworkInterfaces.GetValue(
-            interface,
-            "NAME"
-          ),
-          "zone" => GetZoneOfInterface(interface)
-
-        )
-      end
-
-      Builtins.foreach(non_dialup_interfaces) do |interface|
-        known_interfaces = Builtins.add(
-          known_interfaces,
-
-          "id"   => interface,
-          # using function to get name
-          "name" => NetworkInterfaces.GetValue(
-            interface,
-            "NAME"
-          ),
-          "zone" => GetZoneOfInterface(interface)
-
-        )
-      end
-
-      deep_copy(known_interfaces)
     end
 
     # Function returns list of non-dial-up interfaces.
@@ -4298,7 +4301,6 @@ module Yast
     publish function: :GetZonesOfInterfaces, type: "list <string> (list <string>)"
     publish function: :GetInterfacesInZoneSupportingAnyFeature, type: "list <string> (string)"
     publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
-    publish function: :GetAllKnownInterfaces, type: "list <map <string, string>> ()"
     publish function: :GetAllNonDialUpInterfaces, type: "list <string> ()"
     publish function: :GetAllDialUpInterfaces, type: "list <string> ()"
     publish function: :GetListOfKnownInterfaces, type: "list <string> ()"
