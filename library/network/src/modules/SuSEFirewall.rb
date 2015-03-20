@@ -838,6 +838,27 @@ module Yast
       false
     end
 
+    # Function returns list of known interfaces in requested zone.
+    # Special strings like 'any' or 'auto' and unknown interfaces are removed from list.
+    #
+    # @param [String] zone
+    # @return	[Array<String>] of interfaces
+    # @example GetInterfacesInZone ("external") -> ["eth4", "eth5"]
+    def GetInterfacesInZone(zone)
+      return [] unless IsKnownZone(zone)
+      deep_copy(get_zone_attr(zone, :interfaces))
+    end
+
+    # Function returns list of known interfaces in requested zone.
+    # In the firewalld case, we don't support the special 'any' string.
+    # Thus, interfaces not in a zone will not be included.
+    #
+    # @param [String] zone
+    # @return	[Array<String>] of interfaces
+    def GetInterfacesInZoneSupportingAnyFeature(zone)
+      GetInterfacesInZone(zone)
+    end
+
     private
 
       def set_zone_modified(zone, zone_params)
@@ -993,6 +1014,8 @@ module Yast
     publish function: :GetZonesOfInterfaces, type: "list <string> (list <string>)"
     publish function: :GetZoneFullName, type: "string (string)"
     publish function: :IsAnyNetworkInterfaceSupported, type: "boolean ()"
+    publish function: :GetInterfacesInZone, type: "list <string> (string)"
+    publish function: :GetInterfacesInZoneSupportingAnyFeature, type: "list <string> (string)"
   end
 
   # ----------------------------------------------------------------------------
