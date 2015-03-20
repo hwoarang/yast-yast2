@@ -285,6 +285,7 @@ module Yast
     publish function: :GetInterfacesInZone, type: "list <string> (string)"
     publish function: :IsServiceSupportedInZone, type: "boolean (string, string)"
     publish function: :GetServices, type: "map <string, map <string, boolean>> (list <string>)"
+    publish function: :GetServicesInZones, type: "map <string, map <string, boolean>> (list <string>)"
 
   end
 
@@ -418,6 +419,57 @@ module Yast
     def GetInterfacesInZoneSupportingAnyFeature(zone)
       GetInterfacesInZone(zone)
     end
+
+    # Function returns map of supported services for all network interfaces.
+    # We need to contend with the fact that service names can come in 2 forms:
+    # 1. "some-service-foo"
+    # 2. "service:some-service-foo"
+    # Firewalld needs to have 'service:' stripped from the name.
+    #
+    # @param	list <string> of services
+    # @return	[Hash <String, Hash{String => Boolean} >]
+    #
+    #
+    # **Structure:**
+    #
+    #    	Returns $[service : $[ interface : supported_status ]]
+    #
+    # @example
+    #	GetServicesInZones (["service:irc-server"]) -> $["service:irc-server":$["eth1":true]]
+    #  // No such service "something"
+    #	GetServicesInZones (["something"])) -> $["something":$["eth1":nil]]
+    #  GetServicesInZones (["samba-server"]) -> $["samba-server":$["eth1":false]]
+    def GetServicesInZones(services)
+      interfaces = []
+      service_status = {}
+
+      zones = @fwd_api.get_zones
+      zones.each { |z| (interfaces << GetInterfacesInZone(z)).flatten! }
+      supported_services = @fwd_api.get_supported_services
+
+      services.each do |s|
+        # Convert the service name to something firewalld can understand.
+        s = _sf2_to_firewalld_service(s)
+        i_hash = {}
+        interfaces.each do |i|
+          # if s is enabled in i
+          z = @fwd_api.get_zone_of_interface(i)
+          if not supported_services.include?(s)
+            i_hash[i] = nil
+          else
+            if @fwd_api.get_services_in_zone(z).include?(s)
+              i_hash[i] = true
+            else
+              i_hash[i] = false
+            end
+          end
+        end
+        service_status[s] = i_hash
+      end
+
+      service_status
+    end
+
   end
 
   # ----------------------------------------------------------------------------
@@ -4106,7 +4158,6 @@ module Yast
     publish function: :AddService, type: "boolean (string, string, string)"
     publish function: :RemoveService, type: "boolean (string, string, string)"
     publish function: :IsServiceDefinedByPackageSupportedInZone, type: "boolean (string, string)", private: true
-    publish function: :GetServicesInZones, type: "map <string, map <string, boolean>> (list <string>)"
     publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :SetServices, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :ReadDefaultConfiguration, type: "void ()", private: true
