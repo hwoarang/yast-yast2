@@ -465,6 +465,8 @@ module Yast
     publish function: :IsInterfaceInZone, type: "boolean (string, string)"
     publish function: :GetZonesOfInterfaces, type: "list <string> (list <string>)"
     publish function: :IsAnyNetworkInterfaceSupported, type: "boolean ()"
+    publish function: :GetInterfacesInZoneSupportingAnyFeature, type: "list <string> (string)"
+    publish function: :GetInterfacesInZone, type: "list <string> (string)"
 
   end
 
@@ -903,6 +905,27 @@ module Yast
     # @return boolean false
     def IsAnyNetworkInterfaceSupported
       false
+    end
+
+    # Function returns list of known interfaces in requested zone.
+    # Special strings like 'any' or 'auto' and unknown interfaces are removed from list.
+    #
+    # @param [String] zone
+    # @return	[Array<String>] of interfaces
+    # @example GetInterfacesInZone ("external") -> ["eth4", "eth5"]
+    def GetInterfacesInZone(zone)
+      return [] if !GetKnownFirewallZones().include?(zone)
+      deep_copy(@SETTINGS[zone][:interfaces])
+    end
+
+    # Function returns list of known interfaces in requested zone.
+    # In the firewalld case, we don't support the special 'any' string.
+    # Thus, interfaces not in a zone will not be included.
+    #
+    # @param [String] zone
+    # @return	[Array<String>] of interfaces
+    def GetInterfacesInZoneSupportingAnyFeature(zone)
+      GetInterfacesInZone(zone)
     end
   end
 
@@ -4398,14 +4421,12 @@ module Yast
     publish function: :SetTrustIPsecAs, type: "void (string)"
     publish function: :GetTrustIPsecAs, type: "string ()"
     publish function: :read_and_import, type: "void (map <string, any>)"
-    publish function: :GetInterfacesInZoneSupportingAnyFeature, type: "list <string> (string)"
     publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
     publish function: :GetAllNonDialUpInterfaces, type: "list <string> ()"
     publish function: :GetAllDialUpInterfaces, type: "list <string> ()"
     publish function: :GetListOfKnownInterfaces, type: "list <string> ()"
     publish function: :RemoveInterfaceFromZone, type: "void (string, string)"
     publish function: :AddInterfaceIntoZone, type: "void (string, string)"
-    publish function: :GetInterfacesInZone, type: "list <string> (string)"
     publish function: :GetFirewallInterfaces, type: "list <string> ()"
     publish function: :InterfacesSupportedByAnyFeature, type: "list <string> (string)"
     publish function: :ArePortsOrServicesAllowed, type: "boolean (list <string>, string, string, boolean)", private: true
