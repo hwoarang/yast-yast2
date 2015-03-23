@@ -504,6 +504,44 @@ module Yast
       end
     end
 
+    def Read
+      # Always call NI::Read, bnc #396646
+      NetworkInterfaces.Read
+      true
+    end
+
+    def restart_service
+      if not IsStarted()
+        StartServices()
+      else
+        StopServices()
+        StartServices()
+      end
+    end
+
+    # In SF2, it's used to write configuration, but not activate. For firewalld
+    # this is simply here to satisfy callers, like modules/Nfs.rb.
+    # @return true
+    def WriteOnly
+      true
+    end
+
+    # Activation implies restarting the service. Since some modules (ie.
+    # modules/Nfs.rb) invoke this directly, rather than letting Write() do
+    # what is needed, we must add it here.
+    # @return true or false depending if service was started correctly
+    def ActivateConfiguration
+      restart_service
+    end
+
+    def Write
+      # Make what we have a permanent configuration
+      return false if !fwd_api.make_permanent
+      return false if !ActivateConfiguration()
+
+      true
+    end
+
     # Function returns the firewall zone of interface, nil if no zone includes
     # the interface. Firewalld does not allow an interface to be in more than
     # one zone, so no error detection for this case is needed.
