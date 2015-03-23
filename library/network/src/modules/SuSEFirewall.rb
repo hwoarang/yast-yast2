@@ -38,6 +38,8 @@ module Yast
   # Factory for construction of appropriate firewall object based on
   # desired backend.
   class Firewall < Module
+    attr_reader :firewall_service
+
     include Yast::Logger
 
     Yast.import "NetworkInterfaces"
