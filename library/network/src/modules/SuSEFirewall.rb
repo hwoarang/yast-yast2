@@ -338,6 +338,7 @@ module Yast
     publish variable: :FIREWALL_PACKAGE, type: "const string"
     publish variable: :SETTINGS, type: "map <string, any>", private: true
     publish variable: :special_all_interface_zone, type: "string"
+    publish variable: :configuration_has_been_read, type: "boolean", private: true
     publish function: :GetStartService, type: "boolean ()"
     publish function: :SetStartService, type: "void (boolean)"
     publish function: :GetEnableService, type: "boolean ()"
@@ -349,6 +350,11 @@ module Yast
     publish function: :IsEnabled, type: "boolean ()"
     publish function: :IsStarted, type: "boolean ()"
     publish function: :GetKnownFirewallZones, type: "list <string> ()"
+    publish function: :Read, type: "boolean ()"
+    publish function: :ActivateConfiguration, type: "boolean ()"
+    publish function: :WriteConfiguration, type: "boolean ()"
+    publish function: :WriteOnly, type: "boolean ()"
+    publish function: :Write, type: "boolean ()"
 
   end
 
@@ -376,6 +382,9 @@ module Yast
       @firewall_service = "firewalld"
       # firewalld package
       @FIREWALL_PACKAGE = "firewalld"
+      # configuration hasn't been read for the default
+      # this should reduce the readings to only ONE
+      @configuration_has_been_read = false
       # firewall settings map
       @SETTINGS = {}
       # list of known firewall zones
@@ -413,6 +422,211 @@ module Yast
       else
         tmp_service
       end
+    end
+
+    def Read
+      # Do not read it again and again
+      # to avoid rewriting changes already made
+      if @configuration_has_been_read
+        Builtins.y2milestone(
+          "FirewallD configuration has been read already."
+        )
+        return true
+      end
+
+      ReadCurrentConfiguration()
+
+      Builtins.y2milestone(
+        "Firewall configuration has been read: %1.",
+        @SETTINGS
+      )
+      # to read configuration only once
+      @configuration_has_been_read = true
+
+      # Always call NI::Read, bnc #396646
+      NetworkInterfaces.Read
+
+    end
+
+    def ReadCurrentConfiguration
+
+      # We need to start the service before we query the firewalld rules
+      unless IsStarted()
+        StartServices()
+      end
+      # Get all the information from zones and load them to @SETTINGS["zones"]
+      GetKnownFirewallZones().each do |zone|
+        @SETTINGS[zone][:masquerade] = @fwd_api.is_masquerade_enabled?(zone)
+        @fwd_api.get_interfaces_in_zone(zone).each do |interface|
+          @SETTINGS[zone][:interfaces] << interface
+        end
+        @fwd_api.get_services_in_zone(zone).each do |service|
+          @SETTINGS[zone][:services] << service
+        end
+        @fwd_api.get_ports_in_zone(zone).each do |ports|
+          @SETTINGS[zone][:ports] << ports
+        end
+        @fwd_api.get_protocols_in_zone(zone).each do |protocol|
+          @SETTINGS[zone][:protocols] << protocol
+        end
+      end
+
+      @SETTINGS["enable_firewall"] = IsEnabled()
+      @SETTINGS["start_firewall"] = IsStarted()
+      @SETTINGS[:logging] = @fwd_api.get_log_denied()
+
+      true
+    end
+
+    def WriteConfiguration
+
+      # just disabled
+      return true if !SuSEFirewallIsInstalled()
+
+      # Can't do anything if service is not running
+      return false if not IsStarted()
+
+      return false if not GetModified()
+
+      Builtins.y2milestone(
+        "Firewall configuration has been changed. Writing: %1.",
+         @SETTINGS
+      )
+      # FIXME: Need to improve that to not re-write everything
+      begin
+        # Set logging
+        @fwd_api.set_log_denied(@SETTINGS[:logging]) if !@fwd_api.is_log_denied?(@SETTINGS[:logging])
+        # Configure the zones
+        GetKnownFirewallZones().each do |zone|
+          # Drop duplicates
+          @SETTINGS[zone][:modified].uniq!
+          if @SETTINGS[zone][:modified].empty?
+            Builtins.y2milestone("zone=#{zone} hasn't been modified. Skipping...")
+            next
+          end
+          if @SETTINGS[zone][:modified].include?(:masquerade)
+            @SETTINGS[zone][:masquerade] ? @fwd_api.add_masquerade(zone) :
+              @fwd_api.remove_masquerade(zone)
+          end
+
+          if @SETTINGS[zone][:modified].include?(:interfaces)
+            # These are the ones which should be enabled
+            good_interfaces = @SETTINGS[zone][:interfaces]
+            # These are the ones which are enabled
+            current_interfaces = @fwd_api.get_interfaces_in_zone(zone)
+            # And these are the ones which should be dropped
+            to_drop = current_interfaces - good_interfaces
+            to_add = good_interfaces - current_interfaces
+            to_drop.each { |rmif| @fwd_api.remove_interface_from_zone(zone, rmif) }
+            to_add.each { |gif| @fwd_api.add_interface_to_zone(zone, gif) }
+          end
+
+          if @SETTINGS[zone][:modified].include?(:services)
+            # These are the services which should be enabled
+            good_services = @SETTINGS[zone][:services]
+            # These are the ones which are enabled
+            current_services = @fwd_api.get_services_in_zone(zone)
+            # And these are the ones which should be dropped
+            to_drop = current_services - good_services
+            to_add = good_services - current_services
+            to_drop.each { |rms| @fwd_api.remove_service_from_zone(zone, rms) }
+            to_add.each { |gs| @fwd_api.add_service_to_zone(zone, gs) }
+          end
+
+          if @SETTINGS[zone][:modified].include?(:ports)
+            # These are the ports which should be enabled
+            good_ports = @SETTINGS[zone][:ports]
+            # These are the ones which are enabled
+            current_ports = @fwd_api.get_ports_in_zone(zone)
+            # And these are the ones which should be dropped
+            to_drop = current_ports - good_ports
+            to_add = good_ports - current_ports
+            to_drop.each { |rmp| @fwd_api.remove_port_from_zone(zone, rmp) }
+            to_add.each { |gp| @fwd_api.add_port_to_zone(zone, gp) }
+          end
+
+          if @SETTINGS[zone][:modified].include?(:protocols)
+            # These are the protocols which should be enabled
+            good_protocols = @SETTINGS[zone][:protocols]
+            # These are the ones which are enabled
+            current_protocols = @fwd_api.get_protocols_in_zone(zone)
+            # And these are the ones which should be dropped
+            to_drop = current_protocols - good_protocols
+            to_add = good_protocols - current_protocols
+            to_drop.each { |rmp| @fwd_api.remove_protocol_from_zone(zone, rmp) }
+            to_add.each { |gp| @fwd_api.add_protocol_to_zone(zone, gp) }
+          end
+
+        end
+
+      rescue FirewallCMDError
+        Builtins.y2error("firewall-cmd failed")
+        raise
+      end
+
+      true
+    end
+
+
+    # In SF2, it's used to write configuration, but not activate. For firewalld
+    # this is simply here to satisfy callers, like modules/Nfs.rb.
+    # @return true
+    def WriteOnly
+      # This does not check if firewalld is running
+      return false if !WriteConfiguration()
+      return false if !@fwd_api.make_permanent
+    end
+
+    # Function which stops firewall. Then firewall is started immediately when firewall
+    # is wanted to be started: SetStartService(boolean).
+    #
+    # @return	[Boolean] if successful
+    def ActivateConfiguration
+=begin
+      # Firewall should start after Write()
+      if GetStartService()
+        # Not started - start it
+        if !IsStarted()
+          Builtins.y2milestone("Starting firewall services")
+          return StartServices()
+          # Started - restart it
+        else
+          if GetModified()
+            Builtins.y2milestone("Stopping firewall services")
+            StopServices()
+            Builtins.y2milestone("Starting firewall services")
+            return StartServices()
+            # not modified - skip restart
+          else
+            Builtins.y2milestone(
+              "Configuration hasn't modified, skipping restarting services"
+            )
+            return true
+          end
+        end
+        # Firewall should stop after Write()
+      else
+        # started - stop
+        if IsStarted()
+          Builtins.y2milestone("Stopping firewall services")
+          return StopServices()
+          # stopped - skip stopping
+        else
+          Builtins.y2milestone("Firewall has been stopped already")
+          return true
+        end
+      end
+=end
+    true
+    end
+
+    def Write
+      # Make what we have a permanent configuration
+      return false if !WriteConfiguration()
+      return false if !@fwd_api.make_permanent
+      return false if !ActivateConfiguration()
+
+      true
     end
 
   end
@@ -3946,7 +4160,6 @@ module Yast
       @SETTINGS["FW_BOOT_FULL_INIT"] == "yes"
     end
 
-    publish variable: :configuration_has_been_read, type: "boolean", private: true
     publish variable: :special_all_interface_string, type: "string"
     publish variable: :max_port_number, type: "integer"
     publish variable: :modified, type: "boolean", private: true
@@ -3964,7 +4177,7 @@ module Yast
     publish function: :WriteOneRecordPerLine, type: "boolean (string)", private: true
     publish function: :SetModified, type: "void ()"
     publish function: :ResetModified, type: "void ()"
-    publish function: :IsServiceSupportedInZone, type: "boolean (string, string)"
+    publish function: :GetKnownFirewallZones, type: "list <string> ()"
     publish function: :GetSpecialInterfacesInZone, type: "list <string> (string)"
     publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
     publish variable: :report_only_once, type: "list <string>", private: true
@@ -4044,13 +4257,8 @@ module Yast
     publish variable: :already_converted, type: "boolean", private: true
     publish function: :ConvertToServicesDefinedByPackages, type: "void ()"
     publish function: :FillUpEmptyConfig, type: "void ()", private: true
-    publish function: :Read, type: "boolean ()"
     publish function: :AnyRPCServiceInConfiguration, type: "boolean ()", private: true
-    publish function: :ActivateConfiguration, type: "boolean ()"
-    publish function: :WriteConfiguration, type: "boolean ()"
     publish function: :CheckKernelModules, type: "void ()", private: true
-    publish function: :WriteOnly, type: "boolean ()"
-    publish function: :Write, type: "boolean ()"
     publish function: :SaveAndRestartService, type: "boolean ()"
     publish function: :GetAdditionalServices, type: "list <string> (string, string)"
     publish function: :SetAdditionalServices, type: "void (string, string, list <string>)"
