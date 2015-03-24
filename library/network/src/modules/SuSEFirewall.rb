@@ -1190,6 +1190,15 @@ module Yast
       return true
 
     end
+
+    # Function returns if firewall is protected from internal zone. For
+    # firewalld, we just return false.
+    #
+    # @return	[Boolean] if protected from internal
+    def GetProtectFromInternalZone
+      false
+    end
+
     # Function returns list of known interfaces in requested zone.
     # Special strings like 'any' or 'auto' and unknown interfaces are removed from list.
     #
@@ -1344,6 +1353,7 @@ module Yast
     publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :SuSEFirewallIsInstalled, type: "boolean ()"
     publish function: :SetInstallPackagesIfMissing, type: "void (boolean)"
+    publish function: :GetProtectFromInternalZone, type: "boolean ()"
 
   end
 
