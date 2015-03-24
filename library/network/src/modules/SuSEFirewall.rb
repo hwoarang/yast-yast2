@@ -509,6 +509,20 @@ module Yast
       end
     end
 
+    def _sf2_to_firewalld_zone(zone)
+      sf2_to_firewalld_map = {
+        "INT" => "trusted",
+        "EXT" => "external",
+        "DMA" => "dmz"
+      }
+
+      if sf2_to_firewalld_map.has_key?(zone)
+        sf2_to_firewalld_map[zone]
+      else
+        zone
+      end
+    end
+
     def Read
       # Always call NI::Read, bnc #396646
       NetworkInterfaces.Read
