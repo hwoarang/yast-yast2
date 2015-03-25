@@ -434,6 +434,11 @@ module Yast
       # Are needed packages installed?
       @needed_packages_installed = nil
 
+      # Since manipulation and polling of information from firewalld requires
+      # that the backend is running, start it if not already running
+      unless IsStarted()
+        StartServices()
+      end
     end
 
     # Function which attempts to convert a sf2_service name to a firewalld
