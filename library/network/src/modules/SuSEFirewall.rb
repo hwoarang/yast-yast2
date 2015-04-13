@@ -656,16 +656,9 @@ module Yast
     def self.create(backend_sym = nil)
       Yast.import "Mode"
 
-      # Old testsuite
-      if Mode.testsuite
-        # For the old testsuite, always generate SF2 instance. FirewallD tests
-        # will be committed later on but they will only affect the new
-        # testsuite
-        SuSEFirewall2.new
-
       # If backend is specificed, go ahead and create an instance. Otherwise, try
       # to detect which backend is enabled and create the appropriate instance.
-      elsif backend_sym == :sf2
+      if backend_sym == :sf2
         SuSEFirewall2.new
       elsif backend_sym == :fwd
         SuSEFirewalld.new

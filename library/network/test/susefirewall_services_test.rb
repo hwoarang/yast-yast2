@@ -4,6 +4,7 @@ require_relative "test_helper"
 
 Yast.import "SuSEFirewallServices"
 Yast.import "SCR"
+Yast.import "SuSEFirewall"
 
 # Path to a test data - service file - mocking the default data path
 SERVICES_DATA_PATH = File.join(

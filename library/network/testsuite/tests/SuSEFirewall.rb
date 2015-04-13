@@ -161,6 +161,12 @@ module Yast
       TESTSUITE_INIT([@READ, @WRITE, @EXECUTE], nil)
       Yast.import "SuSEFirewall"
 
+      # Make sure we have the right class.
+      if SuSEFirewall.class != SuSEFirewall2
+        SuSEFirewall.morph_to(:sf2)
+        SuSEFirewall.main
+      end
+
       # Configuration must be read!
       SuSEFirewall.Read
       # initialize to disabled, not running
