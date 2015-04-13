@@ -7,16 +7,14 @@ Yast.import "SuSEFirewallServices"
 Yast.import "SuSEFirewallProposal"
 Yast.import "Linuxrc"
 
+# Make sure we have the right class.
+if Yast::SuSEFirewall.class != Yast::SuSEFirewall2
+  Yast::SuSEFirewall.morph_to(:sf2)
+  Yast::SuSEFirewall.main
+end
+
 describe Yast::SuSEFirewallProposal do
   subject { Yast::SuSEFirewallProposal }
-
-  before :example do
-    # We shouldn't run this test if firewalld is running
-    if Yast::SuSEFirewall.is_a?(Yast::SuSEFirewalld)
-      skip "FirewallD backend not fully supported yet" do
-      end
-    end
-  end
 
   describe "#ProposeFunctions" do
     context "when iscsi is used" do

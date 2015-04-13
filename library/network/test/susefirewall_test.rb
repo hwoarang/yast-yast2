@@ -8,19 +8,17 @@ Yast.import "Pkg"
 Yast.import "SuSEFirewall"
 Yast.import "Stage"
 
+# Make sure we have the right class.
+if Yast::SuSEFirewall.class != Yast::SuSEFirewall2
+  Yast::SuSEFirewall.morph_to(:sf2)
+  Yast::SuSEFirewall.main
+end
+
 def reset_SuSEFirewallIsInstalled_cache
   Yast::SuSEFirewall.needed_packages_installed = nil
 end
 
 describe Yast::SuSEFirewall do
-
-  before :example do
-    # We shouldn't run this test if firewalld is running
-    if Yast::SuSEFirewall.is_a?(Yast::SuSEFirewalld)
-      skip "FirewallD backend not fully supported yet" do
-      end
-    end
-  end
 
   describe "#SuSEFirewallIsInstalled" do
     before(:each) do
