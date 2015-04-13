@@ -139,4 +139,11 @@ module Yast
   end
 end
 
+# Make sure we have the right class.
+Yast.import "SuSEFirewall"
+if Yast::SuSEFirewall.class != Yast::SuSEFirewall2
+  Yast::SuSEFirewall.morph_to(:sf2)
+  Yast::SuSEFirewall.main
+end
+
 Yast::SuSEFirewallExpertRulesClient.new.main
