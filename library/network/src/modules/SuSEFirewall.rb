@@ -746,6 +746,9 @@ module Yast
     publish function: :GetProtectFromInternalZone, type: "boolean ()"
     publish function: :GetMasquerade, type: "boolean (string)"
     publish function: :SetMasquerade, type: "void (boolean, string)"
+    publish function: :GetSpecialInterfacesInZone, type: "list <string> (string)"
+    publish function: :RemoveSpecialInterfaceFromZone, type: "void (string, string)"
+    publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
 
   end
 
@@ -1409,6 +1412,36 @@ module Yast
         end
       end
 
+      nil
+    end
+
+    # Function returns list of special strings like 'any' or 'auto' and unknown interfaces.
+    # This function is only valid for SF2. For firewalld, we return an empty array.
+    #
+    # @param [String] zone
+    # @return	[Array<String>] special strings or unknown interfaces
+    #
+    # @example
+    #	GetSpecialInterfacesInZone("EXT") -> ["any", "unknown-1", "wrong-3"]
+    def GetSpecialInterfacesInZone(zone)
+      []
+    end
+
+    # Function removes special string from defined zone. For firewalld we
+    # return nil.
+    #
+    # @param [String] interface
+    # @param [String] zone
+    def RemoveSpecialInterfaceFromZone(interface, zone)
+     nil
+    end
+
+    # Functions adds special string into defined zone. For firewalld we
+    # return nil.
+    #
+    # @param [String] interface
+    # @param [String] zone
+    def AddSpecialInterfaceIntoZone(interface, zone)
       nil
     end
 
@@ -4639,8 +4672,6 @@ module Yast
     publish variable: :one_line_per_record, type: "list <string>", private: true
     publish variable: :broadcast_related_module, type: "string", private: true
     publish function: :WriteOneRecordPerLine, type: "boolean (string)", private: true
-    publish function: :GetSpecialInterfacesInZone, type: "list <string> (string)"
-    publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
     publish variable: :report_only_once, type: "list <string>", private: true
     publish function: :ReportOnlyOnce, type: "boolean (string)", private: true
     publish function: :GetListOfSuSEFirewallVariables, type: "list <string> ()", private: true
@@ -4705,7 +4736,6 @@ module Yast
     publish function: :SetAdditionalServices, type: "void (string, string, list <string>)"
     publish function: :IsOtherFirewallRunning, type: "boolean ()"
     publish function: :GetFirewallInterfacesMap, type: "map <string, list <string>> ()"
-    publish function: :RemoveSpecialInterfaceFromZone, type: "void (string, string)"
     publish function: :GetListOfForwardsIntoMasquerade, type: "list <map <string, string>> ()"
     publish function: :RemoveForwardIntoMasqueradeRule, type: "void (integer)"
     publish function: :AddForwardIntoMasqueradeRule, type: "void (string, string, string, string, string, string)"
