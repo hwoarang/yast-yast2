@@ -565,6 +565,10 @@ module Yast
     publish function: :DisableServices, type: "boolean ()"
     publish function: :IsEnabled, type: "boolean ()"
     publish function: :IsStarted, type: "boolean ()"
+    publish function: :GetStartService, type: "boolean ()"
+    publish function: :SetStartService, type: "void (boolean)"
+    publish function: :GetEnableService, type: "boolean ()"
+    publish function: :SetEnableService, type: "void (boolean)"
 
   end
 
@@ -601,6 +605,11 @@ module Yast
       # By default needed packages are just checked, not installed
       @check_and_install_package = false
 
+      # Whether to enable/start firewalld during Write(). This is basically trying
+      # to mimic sf2 behaviour.
+      @to_enable = IsEnabled()
+      @to_start = IsStarted()
+
       # Since manipulation and polling of information from firewalld requires
       # that the backend is running, start it if not already running
       unless IsStarted()
@@ -625,6 +634,79 @@ module Yast
       else
         tmp_service
       end
+    end
+
+    # Function which returns whether firewalld should be enabled in
+    # /etc/init.d/ starting scripts during the Write() process.
+    # FIXME - This doesn't do anything meaningful yet for firewalld.
+    #         It simply returns true.
+    # @see #Write()
+    # @see #EnableServices()
+    #
+    # @return	[Boolean] if the firewall should start
+    def GetEnableService
+      @to_enable
+    end
+
+    # Function which sets if firewalld should be enabled in Write process.
+    #
+    # @param	boolean start_service at Write() process
+    def SetEnableService(enable_service)
+      if !SuSEFirewallIsInstalled()
+        Builtins.y2warning("Cannot set SetEnableService")
+        return nil
+      end
+
+      if enable_service
+        if not IsEnabled()
+          Builtins.y2milestone("Enabling #{@firewall_service}")
+          #TODO: error reporting done in EnableServices - something better?
+          @to_enable = true
+        end
+      else
+        if IsEnabled()
+          Builtins.y2milestone("Disabling #{@firewall_service}")
+          #TODO: error reporting done in DisableServices - something better?
+          @to_enable = false
+        end
+      end
+
+      nil
+    end
+
+    # Function which returns if firewalld should start in Write process.
+    # In fact it means that firewalld will at the end.
+    #
+    # @return	[Boolean] if the firewall should start
+    def GetStartService
+      @to_start
+    end
+
+    # Function which sets if SuSEfirewall should start in Write process.
+    #
+    # @param [Boolean] start_service at Write() process
+    # @see #GetStartService()
+    def SetStartService(start_service)
+      if !SuSEFirewallIsInstalled()
+        Builtins.y2warning("Cannot set SetStartService")
+        return nil
+      end
+
+      if start_service
+        if not IsStarted()
+          Builtins.y2milestone("Starting #{@firewall_service}")
+          #TODO: error reporting done in StartServices - something better?
+          @to_start = true
+        end
+      else
+        if IsStarted()
+          Builtins.y2milestone("Stopping #{@firewall_service}")
+          #TODO: error reporting done in StopServices - something better?
+          @to_start = false
+        end
+      end
+
+      nil
     end
 
     def _sf2_to_firewalld_zone(zone)
@@ -4385,10 +4467,6 @@ module Yast
     publish function: :GetSupportRoute, type: "boolean ()"
     publish function: :SetTrustIPsecAs, type: "void (string)"
     publish function: :GetTrustIPsecAs, type: "string ()"
-    publish function: :GetStartService, type: "boolean ()"
-    publish function: :SetStartService, type: "void (boolean)"
-    publish function: :GetEnableService, type: "boolean ()"
-    publish function: :SetEnableService, type: "void (boolean)"
     publish function: :Export, type: "map <string, any> ()"
     publish function: :Import, type: "void (map <string, any>)"
     publish function: :read_and_import, type: "void (map <string, any>)"
