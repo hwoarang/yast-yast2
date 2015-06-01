@@ -750,7 +750,18 @@ module Yast
     # what is needed, we must add it here.
     # @return true or false depending if service was started correctly
     def ActivateConfiguration
-      restart_service
+      # Firewall should start.
+      if GetStartService()
+        restart_service
+      else
+        StopServices()
+      end
+
+      if GetEnableService()
+        EnableServices()
+      else
+        DisableServices()
+      end
     end
 
     def Write
