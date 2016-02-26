@@ -197,6 +197,30 @@ module Yast
       @modified || SuSEFirewallServices.GetModified
     end
 
+    # By default Firewall packages are just checked whether they are installed.
+    # With this function, you can change the behavior to also offer installing
+    # the packages.
+    #
+    # @param [Boolean] new_status, 'true' if packages should be offered for installation
+    def SetInstallPackagesIfMissing(new_status)
+      if new_status.nil?
+        Builtins.y2error("Wrong value: %1", new_status)
+        return
+      end
+
+      @check_and_install_package = new_status
+
+      if @check_and_install_package
+        Builtins.y2milestone("Firewall packages will installed if missing")
+      else
+        Builtins.y2milestone(
+          "Firewall packages will not be installed even if missing"
+        )
+      end
+
+      nil
+    end
+
     # Function returns list of maps of known interfaces.
     #
     # **Structure:**
@@ -402,6 +426,7 @@ module Yast
     publish function: :SetServices, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
     publish variable: :needed_packages_installed, type: "boolean"
+    publish variable: :check_and_install_package, type: "boolean", private: true
 
   end
 
@@ -433,6 +458,10 @@ module Yast
 
       # Are needed packages installed?
       @needed_packages_installed = nil
+
+      # bnc #388773
+      # By default needed packages are just checked, not installed
+      @check_and_install_package = false
 
       # Since manipulation and polling of information from firewalld requires
       # that the backend is running, start it if not already running
@@ -4205,7 +4234,6 @@ module Yast
     publish function: :AddServiceDefinedByPackageIntoZone, type: "void (string, string)", private: true
     publish function: :RemoveServiceSupportFromZone, type: "void (string, string)", private: true
     publish function: :AddServiceSupportIntoZone, type: "void (string, string)", private: true
-    publish variable: :check_and_install_package, type: "boolean", private: true
     publish function: :SetInstallPackagesIfMissing, type: "void (boolean)"
     publish function: :SuSEFirewallIsInstalled, type: "boolean ()"
     publish variable: :fw_service_can_be_configured, type: "boolean", private: true
