@@ -275,6 +275,15 @@ module Yast
       end
     end
 
+    # Function returns list of known firewall zones (shortnames)
+    #
+    # @return	[Array<String>] of firewall zones
+    #
+    # @example GetKnownFirewallZones() -> ["DMZ", "EXT", "INT"]
+    def GetKnownFirewallZones
+      deep_copy(@known_firewall_zones)
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -339,6 +348,7 @@ module Yast
     publish function: :DisableServices, type: "boolean ()"
     publish function: :IsEnabled, type: "boolean ()"
     publish function: :IsStarted, type: "boolean ()"
+    publish function: :GetKnownFirewallZones, type: "list <string> ()"
 
   end
 
@@ -368,9 +378,22 @@ module Yast
       @FIREWALL_PACKAGE = "firewalld"
       # firewall settings map
       @SETTINGS = {}
+      # list of known firewall zones
+      @known_firewall_zones = ["block", "dmz", "drop", "external", "home",
+                               "internal", "public", "trusted", "work"]
+
       # Zone which works with the special_all_interface_string string. In our case,
       # we don't want to deal with this just yet. FIXME
       @special_all_interface_zone = ""
+
+      # Initialize the @SETTINGS hash
+      @@key_settings.each { |x| @SETTINGS[x] = nil }
+      GetKnownFirewallZones().each do |zone|
+        @SETTINGS[zone] = {}
+        @@zone_attributes.each do |atr|
+          @SETTINGS[zone][atr] = []
+        end
+      end
     end
 
     # Function which attempts to convert a sf2_service name to a firewalld
@@ -645,15 +668,6 @@ module Yast
       @modified = false
 
       nil
-    end
-
-    # Function returns list of known firewall zones (shortnames)
-    #
-    # @return	[Array<String>] of firewall zones
-    #
-    # @example GetKnownFirewallZones() -> ["DMZ", "EXT", "INT"]
-    def GetKnownFirewallZones
-      deep_copy(@known_firewall_zones)
     end
 
     # Report the error, warning, message only once.
@@ -3939,7 +3953,6 @@ module Yast
     publish variable: :is_running, type: "boolean", private: true
     publish variable: :DEFAULT_SETTINGS, type: "map <string, string>", private: true
     publish variable: :verbose_level, type: "integer", private: true
-    publish variable: :known_firewall_zones, type: "list <string>", private: true
     publish variable: :zone_names, type: "map <string, string>", private: true
     publish variable: :int_zone_shortname, type: "string", private: true
     publish variable: :supported_protocols, type: "list <string>", private: true
@@ -3951,7 +3964,6 @@ module Yast
     publish function: :WriteOneRecordPerLine, type: "boolean (string)", private: true
     publish function: :SetModified, type: "void ()"
     publish function: :ResetModified, type: "void ()"
-    publish function: :GetKnownFirewallZones, type: "list <string> ()"
     publish function: :IsServiceSupportedInZone, type: "boolean (string, string)"
     publish function: :GetSpecialInterfacesInZone, type: "list <string> (string)"
     publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
