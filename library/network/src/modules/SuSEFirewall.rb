@@ -41,6 +41,8 @@ module Yast
 
     Yast.import "NetworkInterfaces"
 
+    include Yast::Logger
+
     # Use same hash for package names and services
     @@firewall_backends = {
       :sf2 => "SuSEfirewall2",
@@ -577,6 +579,30 @@ module Yast
       is_zone
     end
 
+    # Returns whether all needed packages are installed (or selected for
+    # installation)
+    #
+    # @return [Boolean] whether the selected firewall backend is installed
+    def SuSEFirewallIsInstalled
+      # Always recheck the status in inst-sys, user/solver might have change
+      # the list of packages selected for installation
+      # bnc#892935: in inst_finish, the package is already installed
+      if Stage.initial
+        @needed_packages_installed = Pkg.IsSelected(@FIREWALL_PACKAGE) || PackageSystem.Installed(@FIREWALL_PACKAGE)
+        log.info "Selected for installation/installed -> #{@needed_packages_installed}"
+      elsif @needed_packages_installed.nil?
+        if Mode.normal
+          @needed_packages_installed = PackageSystem.CheckAndInstallPackages([@FIREWALL_PACKAGE])
+          log.info "CheckAndInstallPackages -> #{@needed_packages_installed}"
+        else
+          @needed_packages_installed = PackageSystem.Installed(@FIREWALL_PACKAGE)
+          log.info "Installed -> #{@needed_packages_installed}"
+        end
+      end
+
+      @needed_packages_installed
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -683,6 +709,10 @@ module Yast
           @SETTINGS[zone][atr] = []
         end
       end
+
+      # Are needed packages installed?
+      @needed_packages_installed = nil
+
     end
 
     # Function which attempts to convert a sf2_service name to a firewalld
@@ -1233,6 +1263,7 @@ module Yast
     publish variable: :SETTINGS, type: "map <string, any>", private: true
     publish variable: :known_firewall_zones, type: "list <string>", private: true
     publish variable: :special_all_interface_zone, type: "string"
+    publish variable: :needed_packages_installed, type: "boolean"
     publish function: :GetStartService, type: "boolean ()"
     publish function: :SetStartService, type: "void (boolean)"
     publish function: :GetEnableService, type: "boolean ()"
@@ -1272,6 +1303,7 @@ module Yast
     publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
     publish function: :SetServices, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
+    publish function: :SuSEFirewallIsInstalled, type: "boolean ()"
 
   end
 
@@ -2303,30 +2335,6 @@ module Yast
       end
 
       nil
-    end
-
-    # Returns whether all needed packages are installed (or selected for
-    # installation)
-    #
-    # @return [Boolean] whether SuSEfirewall2 is installed
-    def SuSEFirewallIsInstalled
-      # Always recheck the status in inst-sys, user/solver might have change
-      # the list of packages selected for installation
-      # bnc#892935: in inst_finish, the package is already installed
-      if Stage.initial
-        @needed_packages_installed = Pkg.IsSelected(@FIREWALL_PACKAGE) || PackageSystem.Installed(@FIREWALL_PACKAGE)
-        log.info "Selected for installation/installed -> #{@needed_packages_installed}"
-      elsif @needed_packages_installed.nil?
-        if Mode.normal
-          @needed_packages_installed = PackageSystem.CheckAndInstallPackages([@FIREWALL_PACKAGE])
-          log.info "CheckAndInstallPackages -> #{@needed_packages_installed}"
-        else
-          @needed_packages_installed = PackageSystem.Installed(@FIREWALL_PACKAGE)
-          log.info "Installed -> #{@needed_packages_installed}"
-        end
-      end
-
-      @needed_packages_installed
     end
 
     # Function resets flag which doesn't allow to read configuration from disk again.
