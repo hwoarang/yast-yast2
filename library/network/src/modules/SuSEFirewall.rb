@@ -506,6 +506,24 @@ module Yast
       Builtins.toset(zones)
     end
 
+    # Function returns if zone (shortname like "EXT") is supported by firewall.
+    # Undefined zones are, for sure, unsupported.
+    #
+    # @param [String] zone shortname
+    # @return	[Boolean] if zone is known and supported.
+    def IsKnownZone(zone)
+      is_zone = false
+
+      Builtins.foreach(GetKnownFirewallZones()) do |known_zone|
+        if known_zone == zone
+          is_zone = true
+          raise Break
+        end
+      end
+
+      is_zone
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -590,6 +608,7 @@ module Yast
     publish function: :GetServices, type: "map <string, map <string, boolean>> (list <string>)"
     publish function: :GetListOfKnownInterfaces, type: "list <string> ()"
     publish function: :GetServicesInZones, type: "map <string, map <string, boolean>> (list <string>)"
+    publish function: :IsKnownZone, type: "boolean (string)", private: true
 
   end
 
@@ -1495,24 +1514,6 @@ module Yast
     # @return	[Boolean] if protocol is supported
     def IsSupportedProtocol(protocol)
       Builtins.contains(@supported_protocols, protocol)
-    end
-
-    # Local function returns if zone (shortname like "EXT") is supported by firewall.
-    # Undefined zones are, for sure, unsupported.
-    #
-    # @param [String] zone shortname
-    # @return	[Boolean] if zone is known and supported.
-    def IsKnownZone(zone)
-      is_zone = false
-
-      Builtins.foreach(GetKnownFirewallZones()) do |known_zone|
-        if known_zone == zone
-          is_zone = true
-          raise Break
-        end
-      end
-
-      is_zone
     end
 
     # Local function returns configuration string used in configuration for zone.
@@ -4427,7 +4428,6 @@ module Yast
     publish function: :ResetSysconfigSuSEFirewall, type: "void (list <string>)", private: true
     publish function: :WriteSysconfigSuSEFirewall, type: "boolean (list <string>)", private: true
     publish function: :IsSupportedProtocol, type: "boolean (string)", private: true
-    publish function: :IsKnownZone, type: "boolean (string)", private: true
     publish function: :GetZoneConfigurationString, type: "string (string)", private: true
     publish function: :GetConfigurationStringZone, type: "string (string)", private: true
     publish function: :GetAllowedServicesForZoneProto, type: "list <string> (string, string)", private: true
