@@ -570,6 +570,30 @@ module Yast
       is_zone
     end
 
+    # Returns whether all needed packages are installed (or selected for
+    # installation)
+    #
+    # @return [Boolean] whether the selected firewall backend is installed
+    def SuSEFirewallIsInstalled
+      # Always recheck the status in inst-sys, user/solver might have change
+      # the list of packages selected for installation
+      # bnc#892935: in inst_finish, the package is already installed
+      if Stage.initial
+        @needed_packages_installed = Pkg.IsSelected(@FIREWALL_PACKAGE) || PackageSystem.Installed(@FIREWALL_PACKAGE)
+        log.info "Selected for installation/installed -> #{@needed_packages_installed}"
+      elsif @needed_packages_installed.nil?
+        if Mode.normal
+          @needed_packages_installed = PackageSystem.CheckAndInstallPackages([@FIREWALL_PACKAGE])
+          log.info "CheckAndInstallPackages -> #{@needed_packages_installed}"
+        else
+          @needed_packages_installed = PackageSystem.Installed(@FIREWALL_PACKAGE)
+          log.info "Installed -> #{@needed_packages_installed}"
+        end
+      end
+
+      @needed_packages_installed
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -661,6 +685,7 @@ module Yast
     publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
     publish function: :SetServices, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
+    publish variable: :needed_packages_installed, type: "boolean"
 
   end
 
@@ -718,6 +743,10 @@ module Yast
           @SETTINGS[zone][atr] = []
         end
       end
+
+      # Are needed packages installed?
+      @needed_packages_installed = nil
+
     end
 
     # Function which attempts to convert a sf2_service name to a firewalld
@@ -2225,30 +2254,6 @@ module Yast
       end
 
       nil
-    end
-
-    # Returns whether all needed packages are installed (or selected for
-    # installation)
-    #
-    # @return [Boolean] whether SuSEfirewall2 is installed
-    def SuSEFirewallIsInstalled
-      # Always recheck the status in inst-sys, user/solver might have change
-      # the list of packages selected for installation
-      # bnc#892935: in inst_finish, the package is already installed
-      if Stage.initial
-        @needed_packages_installed = Pkg.IsSelected(@FIREWALL_PACKAGE) || PackageSystem.Installed(@FIREWALL_PACKAGE)
-        log.info "Selected for installation/installed -> #{@needed_packages_installed}"
-      elsif @needed_packages_installed.nil?
-        if Mode.normal
-          @needed_packages_installed = PackageSystem.CheckAndInstallPackages([@FIREWALL_PACKAGE])
-          log.info "CheckAndInstallPackages -> #{@needed_packages_installed}"
-        else
-          @needed_packages_installed = PackageSystem.Installed(@FIREWALL_PACKAGE)
-          log.info "Installed -> #{@needed_packages_installed}"
-        end
-      end
-
-      @needed_packages_installed
     end
 
     # Function resets flag which doesn't allow to read configuration from disk again.
@@ -4492,7 +4497,6 @@ module Yast
     publish function: :AddServiceSupportIntoZone, type: "void (string, string)", private: true
     publish variable: :check_and_install_package, type: "boolean", private: true
     publish function: :SetInstallPackagesIfMissing, type: "void (boolean)"
-    publish variable: :needed_packages_installed, type: "boolean", private: true
     publish function: :SuSEFirewallIsInstalled, type: "boolean ()"
     publish variable: :fw_service_can_be_configured, type: "boolean", private: true
     publish function: :ResetReadFlag, type: "void ()"
@@ -4548,7 +4552,6 @@ module Yast
     publish function: :GetServicesAcceptRelated, type: "list <string> (string)"
     publish function: :SetServicesAcceptRelated, type: "void (string, list <string>)"
     publish function: :RemoveOldAllowedServiceFromZone, type: "void (map <string, any>, string)", private: true
-    publish variable: :needed_packages_installed, type: "boolean"
     publish function: :full_init_on_boot, type: "boolean (boolean)"
   end
 
