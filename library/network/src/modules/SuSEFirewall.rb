@@ -387,6 +387,32 @@ module Yast
       deep_copy(services_status)
     end
 
+    # Function sets internal variable, which indicates, that any
+    # "firewall settings were modified", to "true".
+    def SetModified
+      @modified = true
+
+      nil
+    end
+
+    # Do not use this function.
+    # Only for firewall installation proposal.
+    def ResetModified
+      Builtins.y2milestone("Reseting firewall-modified to 'false'")
+      @modified = false
+
+      nil
+    end
+
+    # Functions returns whether any firewall's configuration was modified.
+    #
+    # @return	[Boolean] if the configuration was modified
+    def GetModified
+      # Changed SuSEFirewall or
+      # Changed SuSEFirewallServices (needs resatrting as well)
+      @modified || SuSEFirewallServices.GetModified
+    end
+
     # Function returns list of maps of known interfaces.
     #
     # **Structure:**
@@ -609,6 +635,9 @@ module Yast
     publish function: :GetListOfKnownInterfaces, type: "list <string> ()"
     publish function: :GetServicesInZones, type: "map <string, map <string, boolean>> (list <string>)"
     publish function: :IsKnownZone, type: "boolean (string)", private: true
+    publish function: :SetModified, type: "void ()"
+    publish function: :ResetModified, type: "void ()"
+    publish function: :GetModified, type: "boolean ()"
 
   end
 
@@ -1328,23 +1357,6 @@ module Yast
       return true if key_name.nil? && key_name == ""
 
       Builtins.contains(@one_line_per_record, key_name)
-    end
-
-    # Function sets internal variable, which indicates, that any
-    # "firewall settings were modified", to "true".
-    def SetModified
-      @modified = true
-
-      nil
-    end
-
-    # Do not use this function.
-    # Only for firewall installation proposal.
-    def ResetModified
-      Builtins.y2milestone("Reseting firewall-modified to 'false'")
-      @modified = false
-
-      nil
     end
 
     # Report the error, warning, message only once.
@@ -2163,15 +2175,6 @@ module Yast
       end
 
       @needed_packages_installed
-    end
-
-    # Functions returns whether any firewall's configuration was modified.
-    #
-    # @return	[Boolean] if the configuration was modified
-    def GetModified
-      # Changed SuSEFirewall or
-      # Changed SuSEFirewallServices (needs resatrting as well)
-      @modified || SuSEFirewallServices.GetModified
     end
 
     # Function resets flag which doesn't allow to read configuration from disk again.
@@ -4412,9 +4415,6 @@ module Yast
     publish variable: :one_line_per_record, type: "list <string>", private: true
     publish variable: :broadcast_related_module, type: "string", private: true
     publish function: :WriteOneRecordPerLine, type: "boolean (string)", private: true
-    publish function: :SetModified, type: "void ()"
-    publish function: :ResetModified, type: "void ()"
-    publish function: :GetKnownFirewallZones, type: "list <string> ()"
     publish function: :GetSpecialInterfacesInZone, type: "list <string> (string)"
     publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
     publish variable: :report_only_once, type: "list <string>", private: true
@@ -4451,7 +4451,6 @@ module Yast
     publish variable: :needed_packages_installed, type: "boolean", private: true
     publish function: :SuSEFirewallIsInstalled, type: "boolean ()"
     publish variable: :fw_service_can_be_configured, type: "boolean", private: true
-    publish function: :GetModified, type: "boolean ()"
     publish function: :ResetReadFlag, type: "void ()"
     publish function: :GetZoneFullName, type: "string (string)"
     publish function: :SetProtectFromInternalZone, type: "void (boolean)"
