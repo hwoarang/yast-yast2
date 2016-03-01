@@ -103,6 +103,44 @@ module Yast
       running_backends
     end
 
+    # Function returns map of supported services in all firewall zones.
+    #
+    # @param	list <string> of services
+    # @return	[Hash <String, Hash{String => Boolean>}]
+    #
+    #
+    # **Structure:**
+    #
+    #    	Returns $[service : $[ zone_name : supported_status]]
+    #
+    # @example
+    #  // Firewall in not protected from internal zone, that's why
+    #  // all services report that they are enabled in INT zone
+    #  GetServices (["samba-server", "service:irc-server"]) -> $[
+    #    "samba-server" : $["DMZ":false, "EXT":false, "INT":true],
+    #    "service:irc-server" : $["DMZ":false, "EXT":true, "INT":true]
+    #  ]
+    def GetServices(services)
+      services = deep_copy(services)
+      # $[ service : $[ firewall_zone : status ]]
+      services_status = {}
+
+      # for all services requested
+      Builtins.foreach(services) do |service|
+        Ops.set(services_status, service, {})
+        # for all zones in configuration
+        Builtins.foreach(GetKnownFirewallZones()) do |zone|
+          Ops.set(
+            services_status,
+            [service, zone],
+            IsServiceSupportedInZone(service, zone)
+          )
+        end
+      end
+
+      deep_copy(services_status)
+    end
+
     # Function returns list of maps of known interfaces.
     #
     # **Structure:**
@@ -246,6 +284,7 @@ module Yast
     publish function: :GetInterfacesInZoneSupportingAnyFeature, type: "list <string> (string)"
     publish function: :GetInterfacesInZone, type: "list <string> (string)"
     publish function: :IsServiceSupportedInZone, type: "boolean (string, string)"
+    publish function: :GetServices, type: "map <string, map <string, boolean>> (list <string>)"
 
   end
 
@@ -2554,44 +2593,6 @@ module Yast
       deep_copy(services_status)
     end
 
-    # Function returns map of supported services in all firewall zones.
-    #
-    # @param	list <string> of services
-    # @return	[Hash <String, Hash{String => Boolean>}]
-    #
-    #
-    # **Structure:**
-    #
-    #    	Returns $[service : $[ zone_name : supported_status]]
-    #
-    # @example
-    #  // Firewall in not protected from internal zone, that's why
-    #  // all services report that they are enabled in INT zone
-    #  GetServices (["samba-server", "service:irc-server"]) -> $[
-    #    "samba-server" : $["DMZ":false, "EXT":false, "INT":true],
-    #    "service:irc-server" : $["DMZ":false, "EXT":true, "INT":true]
-    #  ]
-    def GetServices(services)
-      services = deep_copy(services)
-      # $[ service : $[ firewall_zone : status ]]
-      services_status = {}
-
-      # for all services requested
-      Builtins.foreach(services) do |service|
-        Ops.set(services_status, service, {})
-        # for all zones in configuration
-        Builtins.foreach(GetKnownFirewallZones()) do |zone|
-          Ops.set(
-            services_status,
-            [service, zone],
-            IsServiceSupportedInZone(service, zone)
-          )
-        end
-      end
-
-      deep_copy(services_status)
-    end
-
     # Function sets status for several services in several firewall zones.
     #
     # @param	list <string> service ids
@@ -4106,7 +4107,6 @@ module Yast
     publish function: :RemoveService, type: "boolean (string, string, string)"
     publish function: :IsServiceDefinedByPackageSupportedInZone, type: "boolean (string, string)", private: true
     publish function: :GetServicesInZones, type: "map <string, map <string, boolean>> (list <string>)"
-    publish function: :GetServices, type: "map <string, map <string, boolean>> (list <string>)"
     publish function: :SetServicesForZones, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :SetServices, type: "boolean (list <string>, list <string>, boolean)"
     publish function: :ReadDefaultConfiguration, type: "void ()", private: true
