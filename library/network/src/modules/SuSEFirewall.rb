@@ -245,6 +245,7 @@ module Yast
     publish function: :IsAnyNetworkInterfaceSupported, type: "boolean ()"
     publish function: :GetInterfacesInZoneSupportingAnyFeature, type: "list <string> (string)"
     publish function: :GetInterfacesInZone, type: "list <string> (string)"
+    publish function: :IsServiceSupportedInZone, type: "boolean (string, string)"
 
   end
 
@@ -331,6 +332,34 @@ module Yast
       false
     end
 
+    # Function returns true if service is supported (allowed) in zone. Service must be defined
+    # already be defined. We also try to work transarently based on port
+    # matching as well. For example, if port 22 is enabled but ssh service is
+    # not, then this function will still return true.
+    # true. We only deal with service names
+    #
+    # @see YCP Module SuSEFirewallServices
+    # @param [String] service id
+    # @param [String] zone
+    # @return	[Boolean] if supported
+    #
+    # @example
+    #	// All ports defined by dns-server service in SuSEFirewallServices module
+    #	// are enabled in the respective zone
+    #	IsServiceSupportedInZone ("dns-server", "external") -> true
+    def IsServiceSupportedInZone(service, zone)
+      return nil if !IsKnownZone(zone)
+
+      service = _sf2_to_firewalld_service(service)
+
+      port, protocol = fwd_api.service_get_port_and_protocol(service)
+
+      return true if fwd_api.is_service_enabled?(zone, service) or
+          fwd_api.is_port_enabled?(zone, "#{port}/#{protocol}")
+
+      return false
+
+    end
     # Function returns list of known interfaces in requested zone.
     # Special strings like 'any' or 'auto' and unknown interfaces are removed from list.
     #
@@ -4002,7 +4031,6 @@ module Yast
     publish function: :SetModified, type: "void ()"
     publish function: :ResetModified, type: "void ()"
     publish function: :GetKnownFirewallZones, type: "list <string> ()"
-    publish function: :IsServiceSupportedInZone, type: "boolean (string, string)"
     publish function: :GetSpecialInterfacesInZone, type: "list <string> (string)"
     publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
     publish variable: :report_only_once, type: "list <string>", private: true
