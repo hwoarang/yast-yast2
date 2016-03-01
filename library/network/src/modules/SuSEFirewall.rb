@@ -388,6 +388,32 @@ module Yast
       deep_copy(services_status)
     end
 
+    # Function sets status for several services in several firewall zones.
+    #
+    # @param	list <string> service ids
+    # @param	list <string> firewall zones (EXT|INT|DMZ...)
+    #  // Disabling services
+    #	SetServices (["samba-server", "service:irc-server"], ["eth1", "modem0"], false)
+    #  // Enabling services
+    #  SetServices (["samba-server", "service:irc-server"], ["eth1", "modem0"], true)
+    # @see #SetServicesForZones()
+    def SetServices(services_ids, interfaces, new_status)
+      services_ids = deep_copy(services_ids)
+      interfaces = deep_copy(interfaces)
+      firewall_zones = GetZonesOfInterfacesWithAnyFeatureSupported(interfaces)
+      if Builtins.size(firewall_zones) == 0
+        Builtins.y2error(
+          "Interfaces '%1' are not in any group if interfaces",
+          interfaces
+        )
+        return false
+      end
+
+      SetModified()
+
+      SetServicesForZones(services_ids, firewall_zones, new_status)
+    end
+
     # Function sets internal variable, which indicates, that any
     # "firewall settings were modified", to "true".
     def SetModified
@@ -1152,6 +1178,7 @@ module Yast
     publish function: :ResetModified, type: "void ()"
     publish function: :GetModified, type: "boolean ()"
     publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
+    publish function: :SetServices, type: "boolean (list <string>, list <string>, boolean)"
 
   end
 
@@ -3066,36 +3093,6 @@ module Yast
       end
 
       nil
-    end
-
-    # Function sets status for several services on several network interfaces.
-    #
-    # @param	list <string> service ids
-    # @param	list <string> network interfaces
-    # @param	boolean new status of services
-    # @return	[Boolean] if successfull
-    #
-    # @example
-    #  // Disabling services
-    #	SetServices (["samba-server", "service:irc-server"], ["eth1", "modem0"], false)
-    #  // Enabling services
-    #  SetServices (["samba-server", "service:irc-server"], ["eth1", "modem0"], true)
-    # @see #SetServicesForZones()
-    def SetServices(services_ids, interfaces, new_status)
-      services_ids = deep_copy(services_ids)
-      interfaces = deep_copy(interfaces)
-      firewall_zones = GetZonesOfInterfacesWithAnyFeatureSupported(interfaces)
-      if Builtins.size(firewall_zones) == 0
-        Builtins.y2error(
-          "Interfaces '%1' are not in any group if interfaces",
-          interfaces
-        )
-        return false
-      end
-
-      SetModified()
-
-      SetServicesForZones(services_ids, firewall_zones, new_status)
     end
 
     # Local function sets the default configuration and fills internal values.
