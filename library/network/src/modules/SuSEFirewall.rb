@@ -1250,6 +1250,38 @@ module Yast
       nil
     end
 
+    # Function returns actual state of Masquerading support.
+    # In FirewallD, masquerade is enabled per-zone so this
+    # function treats the 'internal' zone as the default
+    # zone if no zone is given as parameter.
+    #
+    # @param    zone [String] zone to get masqurade status from (default: internal)
+    # @return	[Boolean] if supported
+    def GetMasquerade(zone = "internal")
+      if !IsKnownZone(zone)
+        Builtins.y2error("zone %1 is not valid", zone)
+        return nil
+      end
+      get_zone_attr(zone, :masquerade)
+    end
+
+    # Function sets Masquerade support.
+    #
+    # @param	boolean to support or not to support it
+    # @param    
+    # @param    Zone to enable masquerade on.
+    def SetMasquerade(enable, zone = "internal")
+      if !IsKnownZone(zone)
+        Builtins.y2error("zone %1 is not valid", zone)
+        return nil
+      end
+      SetModified()
+      set_to_zone_attr(zone, :masquerade, enable)
+      add_zone_modified(zone, :masquerade)
+
+      nil
+    end
+
     private
 
       def set_zone_modified(zone, zone_params)
@@ -1424,6 +1456,8 @@ module Yast
     publish function: :SetInstallPackagesIfMissing, type: "void (boolean)"
     publish function: :SaveAndRestartService, type: "boolean ()"
     publish function: :GetProtectFromInternalZone, type: "boolean ()"
+    publish function: :GetMasquerade, type: "boolean (string)"
+    publish function: :SetMasquerade, type: "void (boolean, string)"
   end
 
   # ----------------------------------------------------------------------------
@@ -3900,8 +3934,9 @@ module Yast
 
     # Function returns actual state of Masquerading support.
     #
+    # @param    Ignored
     # @return	[Boolean] if supported
-    def GetMasquerade
+    def GetMasquerade(_zone = nil)
       Ops.get_string(@SETTINGS, "FW_MASQUERADE", "no") == "yes" &&
         Ops.get_string(@SETTINGS, "FW_ROUTE", "no") == "yes"
     end
@@ -3909,7 +3944,8 @@ module Yast
     # Function sets Masquerade support.
     #
     # @param	boolean to support or not to support it
-    def SetMasquerade(enable)
+    # @param    ignored
+    def SetMasquerade(enable, _zone = nil)
       SetModified()
 
       Ops.set(@SETTINGS, "FW_MASQUERADE", enable ? "yes" : "no")
