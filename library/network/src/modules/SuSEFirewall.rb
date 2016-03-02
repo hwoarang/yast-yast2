@@ -445,6 +445,8 @@ module Yast
     publish variable: :needed_packages_installed, type: "boolean"
     publish variable: :check_and_install_package, type: "boolean", private: true
     publish function: :GetProtectFromInternalZone, type: "boolean ()"
+    publish function: :GetMasquerade, type: "boolean ()"
+    publish function: :SetMasquerade, type: "void (boolean)"
 
   end
 
@@ -759,6 +761,37 @@ module Yast
               Builtins.y2error("Failed to remove service '#{service}' from zone '#{zone}'")
             end
           end
+        end
+      end
+
+      nil
+    end
+
+    # Function returns actual state of Masquerading support.
+    # In FirewallD, masquerade is enabled per-zone so this
+    # function has to iterate through all the zones and return
+    # a collective boolean value. This API is probably not very
+    # useful for FirewallD
+    #
+    # @return	[Boolean] if supported
+    def GetMasquerade
+      GetKnownFirewallZones().each do |zone|
+        return false if not fwd_api.is_masquerade_enabled?(zone)
+      end
+      true
+    end
+
+    # Function sets Masquerade support.
+    #
+    # @param	boolean to support or not to support it
+    def SetMasquerade(enable)
+      SetModified()
+
+      GetKnownFirewallZones().each do |zone|
+        if enable
+          fwd_api.add_masquerade(zone)
+        else
+          fwd_api.remove_masquerade(zone)
         end
       end
 
@@ -4341,8 +4374,6 @@ module Yast
     publish function: :IsOtherFirewallRunning, type: "boolean ()"
     publish function: :GetFirewallInterfacesMap, type: "map <string, list <string>> ()"
     publish function: :RemoveSpecialInterfaceFromZone, type: "void (string, string)"
-    publish function: :GetMasquerade, type: "boolean ()"
-    publish function: :SetMasquerade, type: "void (boolean)"
     publish function: :GetListOfForwardsIntoMasquerade, type: "list <map <string, string>> ()"
     publish function: :RemoveForwardIntoMasqueradeRule, type: "void (integer)"
     publish function: :AddForwardIntoMasqueradeRule, type: "void (string, string, string, string, string, string)"
