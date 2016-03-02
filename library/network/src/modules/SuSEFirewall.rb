@@ -1306,6 +1306,54 @@ module Yast
       nil
     end
 
+    # Function returns actual state of Masquerading support.
+    # In FirewallD, masquerade is enabled per-zone so this
+    # function has to iterate through all the zones and return
+    # a collective boolean value. This API is probably not very
+    # useful for FirewallD
+    #
+    # @param    zone to get masqurade status from
+    # @return	[Boolean] if supported
+    def GetMasquerade(zone = nil)
+      if zone.is_a?(::String)
+        if not IsKnownZone(zone)
+          Builtins.y2error("zone %1 is not valid", zone)
+          return nil
+        end
+        @SETTINGS[zone][:masquerade]
+      else
+        GetKnownFirewallZones().each do |z|
+          return false if not @SETTINGS[z][:masquerade]
+        end
+        true
+      end
+    end
+
+    # Function sets Masquerade support.
+    #
+    # @param	boolean to support or not to support it
+    # @param    Zone to enable masquerade on.
+    def SetMasquerade(enable, zone = nil)
+
+      if zone.is_a?(::String)
+        if not IsKnownZone(zone)
+          Builtins.y2error("zone %1 is not valid", zone)
+          return nil
+        end
+        SetModified()
+        @SETTINGS[zone][:masquerade] = enable
+        @SETTINGS[zone][:modified] << :masquerade
+      else
+        SetModified()
+        GetKnownFirewallZones().each do |z|
+          @SETTINGS[z][:masquerade] = enable
+          @SETTINGS[z][:modified] << :masquerade
+        end
+      end
+
+      nil
+    end
+
     publish variable: :firewall_service, type: "string", private: true
     publish variable: :FIREWALL_PACKAGE, type: "const string"
     publish variable: :SETTINGS, type: "map <string, any>", private: true
@@ -1354,6 +1402,8 @@ module Yast
     publish function: :SuSEFirewallIsInstalled, type: "boolean ()"
     publish function: :SetInstallPackagesIfMissing, type: "void (boolean)"
     publish function: :GetProtectFromInternalZone, type: "boolean ()"
+    publish function: :GetMasquerade, type: "boolean (string)"
+    publish function: :SetMasquerade, type: "void (boolean, string)"
 
   end
 
@@ -3875,8 +3925,9 @@ module Yast
 
     # Function returns actual state of Masquerading support.
     #
+    # @param    Ignored
     # @return	[Boolean] if supported
-    def GetMasquerade
+    def GetMasquerade(zone = nil)
       Ops.get_string(@SETTINGS, "FW_MASQUERADE", "no") == "yes" &&
         Ops.get_string(@SETTINGS, "FW_ROUTE", "no") == "yes"
     end
@@ -3884,7 +3935,8 @@ module Yast
     # Function sets Masquerade support.
     #
     # @param	boolean to support or not to support it
-    def SetMasquerade(enable)
+    # @param    ignored
+    def SetMasquerade(enable, zone = nil)
       SetModified()
 
       Ops.set(@SETTINGS, "FW_MASQUERADE", enable ? "yes" : "no")
