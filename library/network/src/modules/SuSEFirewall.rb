@@ -378,6 +378,108 @@ module Yast
       Yast.const_set('SuSEFirewall', self.create(backend_sym))
     end
 
+    # Functions starts services needed for SuSEFirewall
+    #
+    # @return	[Boolean] result
+    def StartServices
+      return true if Mode.testsuite
+
+      return false if !SuSEFirewallIsInstalled()
+
+      if Service.Start(@firewall_service)
+        Builtins.y2milestone("Started")
+        return true
+      else
+        Builtins.y2error("Cannot start service %1", @firewall_service)
+        return false
+      end
+    end
+
+    # Functions stops services needed for SuSEFirewall
+    #
+    # @return	[Boolean] result
+    def StopServices
+      return true if Mode.testsuite
+
+      return false if !SuSEFirewallIsInstalled()
+
+      if Service.Stop(@firewall_service)
+        Builtins.y2milestone("Stopped")
+        return true
+      else
+        Builtins.y2error("Could not stop service %1", @firewall_service)
+        return false
+      end
+    end
+
+    # Functions enables services needed for SuSEFirewall in /etc/inet.d/
+    #
+    # @return	[Boolean] result
+    def EnableServices
+      all_ok = true
+
+      return false if !SuSEFirewallIsInstalled()
+
+      if !Service.Enable(@firewall_service)
+        all_ok = true
+        # TRANSLATORS: a popup error message
+        Report.LongError(Service.Error)
+      end
+
+      all_ok
+    end
+
+    # Functions disables services needed for SuSEFirewall in /etc/inet.d/
+    #
+    # @return	[Boolean] result
+    def DisableServices
+      return false if !SuSEFirewallIsInstalled()
+
+      if Service.Disable(@firewall_service)
+        return true
+      else
+        # TRANSLATORS: a popup error message
+        Report.LongError(Service.Error)
+        return false
+      end
+    end
+
+    # Function determines if all SuSEFirewall scripts are enabled in
+    # init scripts /etc/init.d/ now.
+    # For configuration "enabled" status use GetEnableService().
+    #
+    # @return	[Boolean] if enabled
+    def IsEnabled
+      return false if !SuSEFirewallIsInstalled()
+
+      if Service.Enabled(@firewall_service)
+        Builtins.y2milestone("Firewall service is enabled")
+        return true
+      else
+        Builtins.y2milestone("Firewall service is not enabled")
+        return false
+      end
+    end
+
+    # Function determines if at least one SuSEFirewall script is started now.
+    # For configuration "started" status use GetStartService().
+    #
+    # @return	[Boolean] if started
+    def IsStarted
+      return false if !SuSEFirewallIsInstalled()
+
+      return true if Mode.testsuite
+
+      Builtins.y2milestone("Checking firewall status...")
+      if Service.Status(@firewall_service) == 0
+        Builtins.y2milestone("Firewall service is started")
+        return true
+      else
+        Builtins.y2milestone("Firewall service is stopped")
+        return false
+      end
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -457,6 +559,12 @@ module Yast
     publish function: :GetSpecialInterfacesInZone, type: "list <string> (string)"
     publish function: :RemoveSpecialInterfaceFromZone, type: "void (string, string)"
     publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
+    publish function: :StartServices, type: "boolean ()"
+    publish function: :StopServices, type: "boolean ()"
+    publish function: :EnableServices, type: "boolean ()"
+    publish function: :DisableServices, type: "boolean ()"
+    publish function: :IsEnabled, type: "boolean ()"
+    publish function: :IsStarted, type: "boolean ()"
 
   end
 
@@ -2086,108 +2194,6 @@ module Yast
       end
 
       nil
-    end
-
-    # Functions starts services needed for SuSEFirewall
-    #
-    # @return	[Boolean] result
-    def StartServices
-      return true if Mode.testsuite
-
-      return false if !SuSEFirewallIsInstalled()
-
-      if Service.Start(@firewall_service)
-        Builtins.y2milestone("Started")
-        return true
-      else
-        Builtins.y2error("Cannot start service %1", @firewall_service)
-        return false
-      end
-    end
-
-    # Functions stops services needed for SuSEFirewall
-    #
-    # @return	[Boolean] result
-    def StopServices
-      return true if Mode.testsuite
-
-      return false if !SuSEFirewallIsInstalled()
-
-      if Service.Stop(@firewall_service)
-        Builtins.y2milestone("Stopped")
-        return true
-      else
-        Builtins.y2error("Could not stop service %1", @firewall_service)
-        return false
-      end
-    end
-
-    # Functions enables services needed for SuSEFirewall in /etc/inet.d/
-    #
-    # @return	[Boolean] result
-    def EnableServices
-      all_ok = true
-
-      return false if !SuSEFirewallIsInstalled()
-
-      if !Service.Enable(@firewall_service)
-        all_ok = true
-        # TRANSLATORS: a popup error message
-        Report.LongError(Service.Error)
-      end
-
-      all_ok
-    end
-
-    # Functions disables services needed for SuSEFirewall in /etc/inet.d/
-    #
-    # @return	[Boolean] result
-    def DisableServices
-      return false if !SuSEFirewallIsInstalled()
-
-      if Service.Disable(@firewall_service)
-        return true
-      else
-        # TRANSLATORS: a popup error message
-        Report.LongError(Service.Error)
-        return false
-      end
-    end
-
-    # Function determines if all SuSEFirewall scripts are enabled in
-    # init scripts /etc/init.d/ now.
-    # For configuration "enabled" status use GetEnableService().
-    #
-    # @return	[Boolean] if enabled
-    def IsEnabled
-      return false if !SuSEFirewallIsInstalled()
-
-      if Service.Enabled(@firewall_service)
-        Builtins.y2milestone("Firewall service is enabled")
-        return true
-      else
-        Builtins.y2milestone("Firewall service is not enabled")
-        return false
-      end
-    end
-
-    # Function determines if at least one SuSEFirewall script is started now.
-    # For configuration "started" status use GetStartService().
-    #
-    # @return	[Boolean] if started
-    def IsStarted
-      return false if !SuSEFirewallIsInstalled()
-
-      return true if Mode.testsuite
-
-      Builtins.y2milestone("Checking firewall status...")
-      if Service.Status(@firewall_service) == 0
-        Builtins.y2milestone("Firewall service is started")
-        return true
-      else
-        Builtins.y2milestone("Firewall service is stopped")
-        return false
-      end
     end
 
     # Function for getting exported SuSEFirewall configuration
@@ -4383,12 +4389,6 @@ module Yast
     publish function: :SetStartService, type: "void (boolean)"
     publish function: :GetEnableService, type: "boolean ()"
     publish function: :SetEnableService, type: "void (boolean)"
-    publish function: :StartServices, type: "boolean ()"
-    publish function: :StopServices, type: "boolean ()"
-    publish function: :EnableServices, type: "boolean ()"
-    publish function: :DisableServices, type: "boolean ()"
-    publish function: :IsEnabled, type: "boolean ()"
-    publish function: :IsStarted, type: "boolean ()"
     publish function: :Export, type: "map <string, any> ()"
     publish function: :Import, type: "void (map <string, any>)"
     publish function: :read_and_import, type: "void (map <string, any>)"
