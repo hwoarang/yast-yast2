@@ -638,6 +638,7 @@ module Yast
     publish function: :SetModified, type: "void ()"
     publish function: :ResetModified, type: "void ()"
     publish function: :GetModified, type: "boolean ()"
+    publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
 
   end
 
@@ -1067,6 +1068,24 @@ module Yast
       end
 
       zone_full_name
+    end
+
+    # Function returns list of zones of requested interfaces.
+    # Special string 'any' in 'EXT' zone is supported.
+    #
+    # @param [Array<String>] interfaces
+    # @return	[Array<String>] firewall zones
+    #
+    # @example
+    #	GetZonesOfInterfaces (["eth1","eth4"]) -> ["EXT"]
+    def GetZonesOfInterfacesWithAnyFeatureSupported(interfaces)
+      interfaces = deep_copy(interfaces)
+      zones = []
+      interfaces.each do |interface|
+        zone = GetZoneOfInterface(interface)
+        zones << zone if !zone.nil?
+      end
+      deep_copy(zones)
     end
 
     # Function returns whether the feature 'any' network interface is supported.
@@ -4460,7 +4479,6 @@ module Yast
     publish function: :SetTrustIPsecAs, type: "void (string)"
     publish function: :GetTrustIPsecAs, type: "string ()"
     publish function: :read_and_import, type: "void (map <string, any>)"
-    publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
     publish function: :GetAllNonDialUpInterfaces, type: "list <string> ()"
     publish function: :GetAllDialUpInterfaces, type: "list <string> ()"
     publish function: :RemoveInterfaceFromZone, type: "void (string, string)"
