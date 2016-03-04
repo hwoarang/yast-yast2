@@ -405,6 +405,23 @@ module Yast
       deep_copy(known_interfaces)
     end
 
+    # Function returns list of all known interfaces.
+    #
+    # @return	[Array<String>] of interfaces
+    # @example GetListOfKnownInterfaces() -> ["eth1", "eth2", "modem0", "dsl5"]
+    def GetListOfKnownInterfaces
+      interfaces = []
+
+      Builtins.foreach(GetAllKnownInterfaces()) do |interface_map|
+        interfaces = Builtins.add(
+          interfaces,
+          Ops.get_string(interface_map, "id", "")
+        )
+      end
+
+      deep_copy(interfaces)
+    end
+
     # Function returns list of zones of requested interfaces
     #
     # @param [Array<String>] interfaces
@@ -507,6 +524,7 @@ module Yast
     publish function: :GetInterfacesInZone, type: "list <string> (string)"
     publish function: :IsServiceSupportedInZone, type: "boolean (string, string)"
     publish function: :GetServices, type: "map <string, map <string, boolean>> (list <string>)"
+    publish function: :GetListOfKnownInterfaces, type: "list <string> ()"
 
   end
 
@@ -2367,23 +2385,6 @@ module Yast
       end
 
       deep_copy(dial_up_interfaces)
-    end
-
-    # Function returns list of all known interfaces.
-    #
-    # @return	[Array<String>] of interfaces
-    # @example GetListOfKnownInterfaces() -> ["eth1", "eth2", "modem0", "dsl5"]
-    def GetListOfKnownInterfaces
-      interfaces = []
-
-      Builtins.foreach(GetAllKnownInterfaces()) do |interface_map|
-        interfaces = Builtins.add(
-          interfaces,
-          Ops.get_string(interface_map, "id", "")
-        )
-      end
-
-      deep_copy(interfaces)
     end
 
     # Function removes interface from defined zone.
@@ -4449,7 +4450,6 @@ module Yast
     publish function: :GetZonesOfInterfacesWithAnyFeatureSupported, type: "list <string> (list <string>)"
     publish function: :GetAllNonDialUpInterfaces, type: "list <string> ()"
     publish function: :GetAllDialUpInterfaces, type: "list <string> ()"
-    publish function: :GetListOfKnownInterfaces, type: "list <string> ()"
     publish function: :RemoveInterfaceFromZone, type: "void (string, string)"
     publish function: :AddInterfaceIntoZone, type: "void (string, string)"
     publish function: :GetFirewallInterfaces, type: "list <string> ()"
