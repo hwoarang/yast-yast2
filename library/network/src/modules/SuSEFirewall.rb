@@ -650,6 +650,29 @@ module Yast
       Yast.const_set('SuSEFirewall', self.class.superclass.create(backend_sym))
     end
 
+    # Local function for increasing the verbosity level.
+    def IncreaseVerbosity
+      @verbose_level = Ops.add(@verbose_level, 1)
+
+      nil
+    end
+
+    # Local function for decreasing the verbosity level.
+    def DecreaseVerbosity
+      @verbose_level = Ops.subtract(@verbose_level, 1)
+
+      nil
+    end
+
+    # Local function returns if other functions should produce verbose output.
+    # like popups, reporting errors, etc.
+    #
+    # @return	[Boolean] is_verbose
+    def IsVerbose
+      # verbose level must be above zero to be verbose
+      Ops.greater_than(@verbose_level, 0)
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -705,6 +728,7 @@ module Yast
     publish variable: :SETTINGS, type: "map <string, any>", private: true
     publish variable: :special_all_interface_zone, type: "string"
     publish variable: :configuration_has_been_read, type: "boolean", private: true
+    publish variable: :verbose_level, type: "integer", private: true
     publish function: :GetStartService, type: "boolean ()"
     publish function: :SetStartService, type: "void (boolean)"
     publish function: :GetEnableService, type: "boolean ()"
@@ -751,6 +775,9 @@ module Yast
     publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
     publish function: :RemoveInterfaceFromZone, type: "void (string, string)"
     publish function: :AddInterfaceIntoZone, type: "void (string, string)"
+    publish function: :IncreaseVerbosity, type: "void ()", private: true
+    publish function: :DecreaseVerbosity, type: "void ()", private: true
+    publish function: :IsVerbose, type: "boolean ()", private: true
 
   end
 
@@ -791,6 +818,8 @@ module Yast
       # configuration hasn't been read for the default
       # this should reduce the readings to only ONE
       @configuration_has_been_read = false
+      # verbose_level -> if verbosity is more than 0, be verbose, starting in verbose mode
+      @verbose_level = 1
       # firewall settings map
       @SETTINGS = {}
       # list of known firewall zones
@@ -1800,29 +1829,6 @@ module Yast
     # @return	[Array<String>] of names of variables
     def GetListOfSuSEFirewallVariables
       deep_copy(@SuSEFirewall_variables)
-    end
-
-    # Local function for increasing the verbosity level.
-    def IncreaseVerbosity
-      @verbose_level = Ops.add(@verbose_level, 1)
-
-      nil
-    end
-
-    # Local function for decreasing the verbosity level.
-    def DecreaseVerbosity
-      @verbose_level = Ops.subtract(@verbose_level, 1)
-
-      nil
-    end
-
-    # Local function returns if other functions should produce verbose output.
-    # like popups, reporting errors, etc.
-    #
-    # @return	[Boolean] is_verbose
-    def IsVerbose
-      # verbose level must be above zero to be verbose
-      Ops.greater_than(@verbose_level, 0)
     end
 
     # Local function for returning default values (if defined) for sysconfig variables.
@@ -4739,7 +4745,6 @@ module Yast
     publish variable: :modified, type: "boolean", private: true
     publish variable: :is_running, type: "boolean", private: true
     publish variable: :DEFAULT_SETTINGS, type: "map <string, string>", private: true
-    publish variable: :verbose_level, type: "integer", private: true
     publish variable: :zone_names, type: "map <string, string>", private: true
     publish variable: :int_zone_shortname, type: "string", private: true
     publish variable: :supported_protocols, type: "list <string>", private: true
@@ -4752,9 +4757,6 @@ module Yast
     publish variable: :report_only_once, type: "list <string>", private: true
     publish function: :ReportOnlyOnce, type: "boolean (string)", private: true
     publish function: :GetListOfSuSEFirewallVariables, type: "list <string> ()", private: true
-    publish function: :IncreaseVerbosity, type: "void ()", private: true
-    publish function: :DecreaseVerbosity, type: "void ()", private: true
-    publish function: :IsVerbose, type: "boolean ()", private: true
     publish function: :GetDefaultValue, type: "string (string)", private: true
     publish function: :ReadSysconfigSuSEFirewall, type: "void (list <string>)", private: true
     publish function: :ResetSysconfigSuSEFirewall, type: "void (list <string>)", private: true
