@@ -1551,6 +1551,76 @@ module Yast
       AddInterfaceIntoZone(interface, zone)
     end
 
+    # Function returns actual state of logging.
+    #
+    # @param [String] unused (for SF2 compatibility)
+    # @return	[String] 'off', 'multicast', 'broadcast', etc
+    #
+    # @example
+    #	GetLoggingSettings() -> 'broadcast'
+    def GetLoggingSettings(void_param = nil)
+      @SETTINGS[:logging]
+    end
+
+    # Function sets state of logging.
+    #
+    # @param [String] unused (for SF2 compatibility)
+    # @param	string new logging state 'off', 'multicast', 'broadcast'
+    #
+    # @example
+    #	SetLoggingSettings ("off")
+    def SetLoggingSettings(rule = nil, state)
+
+      return nil if @SETTINGS[:logging] == state
+
+      SetModified()
+
+      @SETTINGS[:logging] = state.downcase
+
+      nil
+    end
+
+    # Function returns yes/no - ingoring broadcast for zone
+    #
+    # @param [String] unused
+    # @return	[String] "yes" or "no"
+    #
+    # @example
+    #	// Does not logg ignored broadcast packets
+    #	GetIgnoreLoggingBroadcast () -> "yes"
+    def GetIgnoreLoggingBroadcast(zone = nil)
+      if self.is_a?(SuSEFirewall2) and !IsKnownZone(zone)
+        Builtins.y2error("Unknown zone '%1'", zone)
+        return nil
+      end
+
+      return "yes" if @SETTINGS[:logging] == "broadcast"
+
+      return "no"
+    end
+
+    # Function sets yes/no - ingoring broadcast for zone
+    #
+    # @param [String] unused
+    # @param	string ignore 'yes' or 'no'
+    #
+    # @example
+    #	// Do not log broadcast packetes from DMZ
+    #	SetIgnoreLoggingBroadcast ("DMZ", "yes")
+    def SetIgnoreLoggingBroadcast(zone = nil, bcast)
+      if self.is_a?(SuSEFirewall2) and !IsKnownZone(zone)
+        Builtins.y2error("Unknown zone '%1'", zone)
+        return nil
+      end
+
+      return nil if @SETTINGS[:logging] == bcast
+      SetModified()
+
+      @SETTINGS[:logging] = bcast.downcase
+
+      nil
+    end
+
   end
 
   # ----------------------------------------------------------------------------
