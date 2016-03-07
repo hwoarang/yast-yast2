@@ -650,6 +650,29 @@ module Yast
       Yast.const_set('SuSEFirewall', self.class.superclass.create(backend_sym))
     end
 
+    # Local function for increasing the verbosity level.
+    def IncreaseVerbosity
+      @verbose_level = Ops.add(@verbose_level, 1)
+
+      nil
+    end
+
+    # Local function for decreasing the verbosity level.
+    def DecreaseVerbosity
+      @verbose_level = Ops.subtract(@verbose_level, 1)
+
+      nil
+    end
+
+    # Local function returns if other functions should produce verbose output.
+    # like popups, reporting errors, etc.
+    #
+    # @return	[Boolean] is_verbose
+    def IsVerbose
+      # verbose level must be above zero to be verbose
+      Ops.greater_than(@verbose_level, 0)
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -738,6 +761,8 @@ module Yast
       # configuration hasn't been read for the default
       # this should reduce the readings to only ONE
       @configuration_has_been_read = false
+      # verbose_level -> if verbosity is more than 0, be verbose, starting in verbose mode
+      @verbose_level = 1
       # firewall settings map
       @SETTINGS = {}
       # list of known firewall zones
@@ -1487,6 +1512,7 @@ module Yast
     publish variable: :special_all_interface_zone, type: "string"
     publish variable: :needed_packages_installed, type: "boolean"
     publish variable: :check_and_install_package, type: "boolean", private: true
+    publish variable: :verbose_level, type: "integer", private: true
     publish function: :GetStartService, type: "boolean ()"
     publish function: :SetStartService, type: "void (boolean)"
     publish function: :GetEnableService, type: "boolean ()"
@@ -1535,6 +1561,9 @@ module Yast
     publish function: :AddSpecialInterfaceIntoZone, type: "void (string, string)"
     publish function: :RemoveInterfaceFromZone, type: "void (string, string)"
     publish function: :AddInterfaceIntoZone, type: "void (string, string)"
+    publish function: :IncreaseVerbosity, type: "void ()", private: true
+    publish function: :DecreaseVerbosity, type: "void ()", private: true
+    publish function: :IsVerbose, type: "boolean ()", private: true
 
   end
 
@@ -1814,29 +1843,6 @@ module Yast
     # @return	[Array<String>] of names of variables
     def GetListOfSuSEFirewallVariables
       deep_copy(@SuSEFirewall_variables)
-    end
-
-    # Local function for increasing the verbosity level.
-    def IncreaseVerbosity
-      @verbose_level = Ops.add(@verbose_level, 1)
-
-      nil
-    end
-
-    # Local function for decreasing the verbosity level.
-    def DecreaseVerbosity
-      @verbose_level = Ops.subtract(@verbose_level, 1)
-
-      nil
-    end
-
-    # Local function returns if other functions should produce verbose output.
-    # like popups, reporting errors, etc.
-    #
-    # @return	[Boolean] is_verbose
-    def IsVerbose
-      # verbose level must be above zero to be verbose
-      Ops.greater_than(@verbose_level, 0)
     end
 
     # Local function for returning default values (if defined) for sysconfig variables.
