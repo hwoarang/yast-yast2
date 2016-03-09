@@ -10,12 +10,12 @@ Yast.import "SuSEFirewall"
 SERVICES_DATA_PATH = File.join(
   File.expand_path(File.dirname(__FILE__)),
   "data",
-  Yast::SuSEFirewallServicesClass::SERVICES_DIR
+  Yast::SuSEFirewall2ServicesClass::SERVICES_DIR
 )
 
 # Adjusts SuSEFirewallServices to read data from test-directory
 def setup_data_dir
-  stub_const("Yast::SuSEFirewallServicesClass::SERVICES_DIR", SERVICES_DATA_PATH)
+  stub_const("Yast::SuSEFirewall2ServicesClass::SERVICES_DIR", SERVICES_DATA_PATH)
 end
 
 describe Yast::SuSEFirewallServices do
@@ -45,8 +45,8 @@ describe Yast::SuSEFirewallServices do
   describe "#service_details" do
     it "returns non-empty service definition" do
       allow(Yast::SuSEFirewallServices).to receive(:all_services).and_return(
-        "service:dns-server"  => Yast::SuSEFirewallServicesClass::DEFAULT_SERVICE.merge("tcp_ports" => ["a", "b"]),
-        "service:dhcp-server" => Yast::SuSEFirewallServicesClass::DEFAULT_SERVICE.merge("udp_ports" => ["x", "y"])
+        "service:dns-server"  => Yast::SuSEFirewall2ServicesClass::DEFAULT_SERVICE.merge("tcp_ports" => ["a", "b"]),
+        "service:dhcp-server" => Yast::SuSEFirewall2ServicesClass::DEFAULT_SERVICE.merge("udp_ports" => ["x", "y"])
       )
       expect(Yast::SuSEFirewallServices.service_details("service:dns-server")).not_to be_nil
       expect(Yast::SuSEFirewallServices.service_details("service:dns-server")["tcp_ports"]).to eq(["a", "b"])
@@ -66,10 +66,10 @@ describe Yast::SuSEFirewallServices do
 
       # Listing services directly from test-dir
       services_on_disk = Dir.entries(SERVICES_DATA_PATH).reject do |s|
-        Yast::SuSEFirewallServicesClass::IGNORED_SERVICES.include?(s)
+        Yast::SuSEFirewall2ServicesClass::IGNORED_SERVICES.include?(s)
       end
       services_on_disk.map! do |s|
-        Yast::SuSEFirewallServicesClass::DEFINED_BY_PKG_PREFIX + s
+        Yast::SuSEFirewall2ServicesClass::DEFINED_BY_PKG_PREFIX + s
       end
 
       services = Yast::SuSEFirewallServices.all_services
