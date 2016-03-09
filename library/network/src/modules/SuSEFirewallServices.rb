@@ -41,6 +41,12 @@ module Yast
   end
 
   class SuSEFirewallServicesClass < Module
+    def self.create
+      SuSEFirewall2ServicesClass.new
+    end
+  end
+
+  class SuSEFirewall2ServicesClass < SuSEFirewallServicesClass
     include Yast::Logger
 
     # this is how services defined by package are distinguished
@@ -745,6 +751,9 @@ module Yast
     publish function: :GetPossiblyConflictServices, type: "list <string> ()"
   end
 
-  SuSEFirewallServices = SuSEFirewallServicesClass.new
-  SuSEFirewallServices.main
+  class SuSEFirewalldServicesClass < SuSEFirewallServicesClass
+  end
+
+  SuSEFirewallServices = SuSEFirewallServicesClass.create
+  SuSEFirewallServices.main if SuSEFirewallServices.is_a?(SuSEFirewall2ServicesClass)
 end
