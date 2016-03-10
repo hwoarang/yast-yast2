@@ -781,6 +781,8 @@ module Yast
     publish function: :IsVerbose, type: "boolean ()", private: true
     publish variable: :supported_protocols, type: "list <string>", private: true
     publish function: :IsSupportedProtocol, type: "boolean (string)", private: true
+    publish function: :GetAdditionalServices, type: "list <string> (string, string)"
+    publish function: :GetAllowedServicesForZoneProto, type: "list <string> (string, string)", private: true
 
   end
 
@@ -1572,6 +1574,48 @@ module Yast
       @SETTINGS[:logging] = bcast.downcase
 
       nil
+    end
+
+    # Function returns list of allowed ports for zone and protocol
+    #
+    # @param [String] zone
+    # @param [String] protocol
+    # @return	[Array<String>] of allowed ports
+    def GetAllowedServicesForZoneProto(zone, protocol)
+      ports = []
+      @SETTINGS[zone][:ports].each do |p|
+        port_proto = p.split("/")
+        ports << port_proto[0] if port_proto[1] == protocol.downcase
+      end
+      @SETTINGS[zone][:protocols].each do |p|
+        ports << p if protocol.downcase == "ip"
+      end
+      deep_copy(ports)
+    end
+
+    # This powerful function returns list of services/ports which are
+    # not assigned to any fully-supported known-services.
+    # This function doesn't check for services defined by packages.
+    # They are listed by a different way.
+    #
+    # @return	[Array<String>] of additional (unassigned) services
+    #
+    # @example
+    #	GetAdditionalServices("TCP", "EXT") -> ["53", "128"]
+    def GetAdditionalServices(protocol, zone)
+      if !IsSupportedProtocol(protocol.upcase)
+        Builtins.y2error("Unknown protocol '%1'", protocol)
+        return nil
+      end
+      if !IsKnownZone(zone)
+        Builtins.y2error("Unknown zone '%1'", zone)
+        return nil
+      end
+
+      # all ports or services allowed in zone for protocol
+      all_allowed_ports = GetAllowedServicesForZoneProto(zone, protocol)
+
+      deep_copy(all_allowed_ports)
     end
 
   end
@@ -4776,7 +4820,6 @@ module Yast
     publish function: :WriteSysconfigSuSEFirewall, type: "boolean (list <string>)", private: true
     publish function: :GetZoneConfigurationString, type: "string (string)", private: true
     publish function: :GetConfigurationStringZone, type: "string (string)", private: true
-    publish function: :GetAllowedServicesForZoneProto, type: "list <string> (string, string)", private: true
     publish function: :SetAllowedServicesForZoneProto, type: "void (list <string>, string, string)", private: true
     publish function: :GetBroadcastConfiguration, type: "string (string)", private: true
     publish function: :SetBroadcastConfiguration, type: "void (string, string)", private: true
@@ -4821,7 +4864,6 @@ module Yast
     publish function: :AnyRPCServiceInConfiguration, type: "boolean ()", private: true
     publish function: :CheckKernelModules, type: "void ()", private: true
     publish function: :SaveAndRestartService, type: "boolean ()"
-    publish function: :GetAdditionalServices, type: "list <string> (string, string)"
     publish function: :SetAdditionalServices, type: "void (string, string, list <string>)"
     publish function: :IsOtherFirewallRunning, type: "boolean ()"
     publish function: :GetFirewallInterfacesMap, type: "map <string, list <string>> ()"
