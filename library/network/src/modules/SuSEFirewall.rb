@@ -634,6 +634,15 @@ module Yast
       true
     end
 
+    # Local function returns if protocol is supported by firewall.
+    # Protocol name must be in upper-cases.
+    #
+    # @param [String] protocol
+    # @return [Boolean] whether protocol is supported, that is, one of TCP, UDP, IP
+    def IsSupportedProtocol(protocol)
+      @supported_protocols.include?(protocol)
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @param backend_sym [Symbol] if not nil, explicitly select :sf2 or :fwd
@@ -788,6 +797,8 @@ module Yast
       # By default needed packages are just checked, not installed
       @check_and_install_package = false
 
+      # list of protocols supported in firewall, use only upper-cases
+      @supported_protocols = ["TCP", "UDP", "IP"]
     end
 
     # Function which attempts to convert a sf2_service name to a firewalld
@@ -1664,6 +1675,8 @@ module Yast
     publish function: :SetLoggingSettings, type: "void (string, string)"
     publish function: :GetIgnoreLoggingBroadcast, type: "string (string)"
     publish function: :SetIgnoreLoggingBroadcast, type: "void (string, string)"
+    publish variable: :supported_protocols, type: "list <string>", private: true
+    publish function: :IsSupportedProtocol, type: "boolean (string)", private: true
   end
 
   # ----------------------------------------------------------------------------
@@ -2060,15 +2073,6 @@ module Yast
       end
 
       write_status
-    end
-
-    # Local function returns if protocol is supported by firewall.
-    # Protocol name must be in upper-cases.
-    #
-    # @param [String] protocol
-    # @return	[Boolean] if protocol is supported
-    def IsSupportedProtocol(protocol)
-      Builtins.contains(@supported_protocols, protocol)
     end
 
     # Local function returns configuration string used in configuration for zone.
