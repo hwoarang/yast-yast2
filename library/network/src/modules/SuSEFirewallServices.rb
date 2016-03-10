@@ -139,6 +139,20 @@ module Yast
       DEFAULT_SERVICE.merge(service_details(service))
     end
 
+    # Sets that configuration was not modified
+    def ResetModified
+      @sfws_modified = false
+
+      nil
+    end
+
+    # Returns whether configuration was modified
+    #
+    # @return [Boolean] modified
+    def GetModified
+      @sfws_modified
+    end
+
   end
 
   class SuSEFirewall2ServicesClass < SuSEFirewallServicesClass
@@ -606,20 +620,6 @@ module Yast
       nil
     end
 
-    # Sets that configuration was not modified
-    def ResetModified
-      @sfws_modified = false
-
-      nil
-    end
-
-    # Returns whether configuration was modified
-    #
-    # @return [Boolean] modified
-    def GetModified
-      @sfws_modified
-    end
-
     # Function returns needed ports allowing broadcast
     #
     # @param [String] service
@@ -789,6 +789,9 @@ module Yast
       @known_services_info = ["description", "modules", "ports", "protocols"]
 
       @known_metadata = { "Name" => "name", "Description" => "description" }
+
+      # firewall needs restarting. Always false for firewalld
+      @sfws_modified = false
     end
 
     # Reads definition of services that can be used in FirewallD
@@ -920,6 +923,14 @@ module Yast
       deep_copy(supported_services)
     end
 
+    # Sets that configuration was modified
+    def SetModified
+      # No need to restart firewalld on service changes.
+      @sfws_modified = false
+
+      nil
+    end
+
     publish function: :ReadServicesDefinedByRPMPackages, type: "boolean ()"
     publish function: :GetSupportedServices, type: "map <string, string> ()"
     publish function: :GetListOfServicesAddedByPackage, type: "list <string> ()"
@@ -930,6 +941,9 @@ module Yast
     publish function: :GetDescription, type: "string (string)"
     publish function: :IsKnownService, type: "boolean (string)"
     publish function: :GetNeededPortsAndProtocols, type: "map <string, list <string>> (string)"
+    publish function: :SetModified, type: "void ()"
+    publish function: :ResetModified, type: "void ()"
+    publish function: :GetModified, type: "boolean ()"
   end
 
   SuSEFirewallServices = SuSEFirewallServicesClass.create
