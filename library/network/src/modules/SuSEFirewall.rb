@@ -665,6 +665,15 @@ module Yast
       Ops.greater_than(@verbose_level, 0)
     end
 
+    # Local function returns if protocol is supported by firewall.
+    # Protocol name must be in upper-cases.
+    #
+    # @param [String] protocol
+    # @return	[Boolean] if protocol is supported
+    def IsSupportedProtocol(protocol)
+      Builtins.contains(@supported_protocols, protocol)
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @return SuSEFirewall2 or SuSEFirewalld instance.
@@ -770,6 +779,8 @@ module Yast
     publish function: :IncreaseVerbosity, type: "void ()", private: true
     publish function: :DecreaseVerbosity, type: "void ()", private: true
     publish function: :IsVerbose, type: "boolean ()", private: true
+    publish variable: :supported_protocols, type: "list <string>", private: true
+    publish function: :IsSupportedProtocol, type: "boolean (string)", private: true
 
   end
 
@@ -836,6 +847,9 @@ module Yast
       # bnc #388773
       # By default needed packages are just checked, not installed
       @check_and_install_package = false
+
+      # list of protocols supported in firewall, use only upper-cases
+      @supported_protocols = ["TCP", "UDP", "IP"]
 
     end
 
@@ -1933,15 +1947,6 @@ module Yast
       end
 
       write_status
-    end
-
-    # Local function returns if protocol is supported by firewall.
-    # Protocol name must be in upper-cases.
-    #
-    # @param [String] protocol
-    # @return	[Boolean] if protocol is supported
-    def IsSupportedProtocol(protocol)
-      Builtins.contains(@supported_protocols, protocol)
     end
 
     # Local function returns configuration string used in configuration for zone.
@@ -4756,7 +4761,6 @@ module Yast
     publish variable: :DEFAULT_SETTINGS, type: "map <string, string>", private: true
     publish variable: :zone_names, type: "map <string, string>", private: true
     publish variable: :int_zone_shortname, type: "string", private: true
-    publish variable: :supported_protocols, type: "list <string>", private: true
     publish variable: :service_defined_by, type: "list <string>", private: true
     publish variable: :allowed_conflict_services, type: "map <string, list <string>>", private: true
     publish variable: :SuSEFirewall_variables, type: "list <string>", private: true
@@ -4770,7 +4774,6 @@ module Yast
     publish function: :ReadSysconfigSuSEFirewall, type: "void (list <string>)", private: true
     publish function: :ResetSysconfigSuSEFirewall, type: "void (list <string>)", private: true
     publish function: :WriteSysconfigSuSEFirewall, type: "boolean (list <string>)", private: true
-    publish function: :IsSupportedProtocol, type: "boolean (string)", private: true
     publish function: :GetZoneConfigurationString, type: "string (string)", private: true
     publish function: :GetConfigurationStringZone, type: "string (string)", private: true
     publish function: :GetAllowedServicesForZoneProto, type: "list <string> (string, string)", private: true
