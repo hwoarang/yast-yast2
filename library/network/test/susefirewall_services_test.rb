@@ -4,7 +4,12 @@ require_relative "test_helper"
 
 Yast.import "SuSEFirewallServices"
 Yast.import "SCR"
-Yast.import "SuSEFirewall"
+
+# Make sure we have the right class.
+if Yast::SuSEFirewallServicesClass.class != Yast::SuSEFirewall2ServicesClass
+  Yast::SuSEFirewallServices.morph_to(:sf2)
+  Yast::SuSEFirewallServices.main
+end
 
 # Path to a test data - service file - mocking the default data path
 SERVICES_DATA_PATH = File.join(
