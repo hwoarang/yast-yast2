@@ -1160,6 +1160,19 @@ module Yast
       true
     end
 
+    # Function adds a special interface 'xenbr+' into the FW_FORWARD_ALWAYS_INOUT_DEV variable.
+    #
+    # @see #https://bugzilla.novell.com/show_bug.cgi?id=154133
+    # @see #https://bugzilla.novell.com/show_bug.cgi?id=233934
+    # @see #https://bugzilla.novell.com/show_bug.cgi?id=375482
+    def AddXenSupport
+      Builtins.y2milestone(
+        "The whole functionality is currently handled by SuSEfirewall2 itself"
+      )
+
+      nil
+    end
+
     # Create appropriate firewall instance based on factors such as which backends
     # are available and/or running/selected.
     # @param backend_sym [Symbol] if not nil, explicitly select :sf2 or :fwd
@@ -2468,6 +2481,7 @@ module Yast
     publish function: :HaveService, type: "boolean (string, string, string)"
     publish function: :AddService, type: "boolean (string, string, string)"
     publish function: :RemoveService, type: "boolean (string, string, string)"
+    publish function: :AddXenSupport, type: "void ()"
   end
 
   # ----------------------------------------------------------------------------
@@ -4712,19 +4726,6 @@ module Yast
       SetModified()
 
       Ops.set(@SETTINGS, Ops.add("FW_IGNORE_FW_BROADCAST_", zone), bcast)
-
-      nil
-    end
-
-    # Function adds a special interface 'xenbr+' into the FW_FORWARD_ALWAYS_INOUT_DEV variable.
-    #
-    # @see #https://bugzilla.novell.com/show_bug.cgi?id=154133
-    # @see #https://bugzilla.novell.com/show_bug.cgi?id=233934
-    # @see #https://bugzilla.novell.com/show_bug.cgi?id=375482
-    def AddXenSupport
-      Builtins.y2milestone(
-        "The whole functionality is currently handled by SuSEfirewall2 itself"
-      )
 
       nil
     end
