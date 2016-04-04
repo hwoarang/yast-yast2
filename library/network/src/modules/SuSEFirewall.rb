@@ -2166,6 +2166,64 @@ module Yast
       super(needed_ports, protocol, zone, false)
     end
 
+    # Function returns if requested service is allowed in respective zone.
+    # Function takes care for service's aliases (only for TCP and UDP).
+    # Service is defined by set of parameters such as port and protocol.
+    #
+    # @param [String] service (service name, port name, port alias or port number)
+    # @param [String] protocol TCP, UDP, RCP or IP
+    # @param [String] interface name (like modem0), firewall zone (like "EXT") or "any" for all zones.
+    # @return	[Boolean] if service is allowed
+    #
+    # @example
+    #	HaveService ("ssh", "TCP", "EXT") -> true
+    #	HaveService ("ssh", "TCP", "modem0") -> false
+    #	HaveService ("53", "UDP", "dsl") -> false
+    def HaveService(service, protocol, interface)
+      if !IsSupportedProtocol(protocol)
+        Builtins.y2error("Unknown protocol: %1", protocol)
+        return nil
+      end
+
+      # definition of searched zones
+      zones = []
+
+      # "any" for all zones, this is ugly
+      if interface == "any"
+        zones = GetKnownFirewallZones()
+        # string interface is the zone name
+      elsif IsKnownZone(interface)
+        zones = Builtins.add(zones, interface)
+        # interface is the interface name
+      else
+        interface = GetZoneOfInterface(interface)
+        zones = Builtins.add(zones, interface) if !interface.nil?
+      end
+
+      # Check and return whether the service (port) is supported anywhere
+      ret = false
+      Builtins.foreach(zones) do |zone|
+        # This function can also handle port ranges
+        if ArePortsOrServicesAllowed([service], protocol, zone, true)
+          ret = true
+          raise Break
+        end
+      end
+
+      ret
+    end
+
+    # Sets whether ports need to be open already during boot
+    # bsc#916376. For FirewallD we simply return whatever
+    # it was passed since FirewallD always does a full init
+    # on boot but we still need to be API compliant
+    #
+    # @param [Boolean] new state
+    # @return [Boolean] current state
+    def full_init_on_boot(new_state)
+      new_state
+    end
+
     private
 
       def set_zone_modified(zone, zone_params)
@@ -2482,6 +2540,7 @@ module Yast
     publish function: :AddService, type: "boolean (string, string, string)"
     publish function: :RemoveService, type: "boolean (string, string, string)"
     publish function: :AddXenSupport, type: "void ()"
+    publish function: :full_init_on_boot, type: "boolean (boolean)"
   end
 
   # ----------------------------------------------------------------------------
