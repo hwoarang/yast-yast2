@@ -13,6 +13,8 @@ module_DATA = \
   modules/NetworkService.rb \
   modules/SuSEFirewallExpertRules.rb \
   modules/SuSEFirewallServices.rb \
+  modules/SuSEFirewall2Services.rb \
+  modules/SuSEFirewalldServices.rb \
   modules/SLPAPI.pm \
   modules/DnsServerAPI.pm
 
