@@ -13,7 +13,7 @@ def reset_SuSEFirewallIsInstalled_cache
 end
 
 # Instantiate an SF2 object
-FakeFirewall = Yast::FirewallClass.create(:sf2)
+FakeFirewall = Yast::SuSEFirewallClass.create(:sf2)
 FakeFirewall.main
 
 describe FakeFirewall do
